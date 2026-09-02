@@ -22,7 +22,7 @@ import time
 import json
 from pathlib import Path
 
-from . import connectors, db, scorer, eligibility, llm_client, git_guard
+from . import connectors, db, scorer, eligibility, llm_client, git_guard, salary
 from .config import JURISDICTIONS
 
 RESUME_TEXT_PATH = Path(__file__).parent / "resume_summary.txt"
@@ -134,7 +134,8 @@ def run(country_codes: list[str], limit_override: int | None = None, run_stage2:
         for job in jobs:
             breakdown = scorer.score_job(job.title, job.description_raw)
             signal = eligibility.assess(job.description_raw, jurisdiction)
-            db.upsert_job(conn, job, breakdown, signal)
+            salary_estimate = salary.estimate_salary(job)
+            db.upsert_job(conn, job, breakdown, signal, salary_estimate=salary_estimate)
             scored_count += 1
             if signal.verdict != "hard_exclude":
                 eligible_count += 1

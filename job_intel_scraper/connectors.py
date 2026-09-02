@@ -8,23 +8,40 @@ bespoke career sites) follows the same pattern: one function that returns a
 list of normalized Job dicts, gated by robots_check first.
 
 Workable and Recruitee were added after real research turned up companies
-that actually use them (Applied EV on Workable, Fastned on Recruitee) —
-Greenhouse and Lever alone came up close to empty across Vietnam,
-Netherlands, and Australia searches, so restricting discovery to just those
-two would have meant covering almost nothing in these three markets.
+that actually use them (Applied EV/Zoomo on Workable, Fastned/Allego/
+GreenFlux/Eneco eMobility on Recruitee) — Greenhouse and Lever alone came
+up close to empty across Vietnam, Netherlands, and Australia searches, so
+restricting discovery to just those two would have meant covering almost
+nothing in these three markets.
 
-This module intentionally does NOT include the local job-board scrapers
-(Seek, Indeed.nl, VietnamWorks, etc.) — those typically require either a
-partner API agreement or careful, individually-reviewed HTML parsing, and
-each one's robots.txt / ToS needs to be checked on its own before writing a
-scraper against it. They're listed in config.py as a checklist, not stubbed
-here, so nothing gets silently built without that review happening first.
+Local job boards (Seek, Indeed, VietnamWorks, TopCV, etc.) were evaluated
+and deliberately NOT connected here: Seek/Indeed/TopCV return real robots.txt
+permission for their search pages but their actual servers return 403 to an
+honestly-identified bot regardless (infrastructure-level blocking, not a
+robots.txt matter — not worked around, same as a robots.txt disallow),
+VietnamWorks' listings only materialize via client-side JS (no server-
+rendered content and no discoverable JSON API to call directly), and
+CareerBuilder.vn's certificate is expired. Those sources go through the
+platform overview's documented manual-paste workflow instead (see
+manual_job.py) — the human browses and pastes, since automating them isn't
+possible without either bypassing a block or a much larger headless-browser
+dependency, neither of which is in scope here.
+
+A company's ATS board can list jobs across MULTIPLE countries (observed on
+Zoomo's Workable feed, which returned UK roles even though Zoomo was found
+via an Australia-focused search) — so every fetched job is checked against
+the jurisdiction's actual country, using structured country data from the
+source when available (Workable, Recruitee) and free-text keyword matching
+otherwise (Greenhouse, Lever). A job that clearly belongs to a different
+country is dropped, not mislabeled.
 """
 
 from __future__ import annotations
 
+import re
 import time
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
+from datetime import datetime, timezone
 from typing import Any
 
 import requests
@@ -34,9 +51,23 @@ from . import robots_check
 GREENHOUSE_API = "https://boards-api.greenhouse.io/v1/boards/{board}/jobs"
 LEVER_API = "https://api.lever.co/v0/postings/{company}"
 WORKABLE_API = "https://apply.workable.com/api/v1/widget/accounts/{account}"
-RECRUITEE_API = "https://{company}.recruitee.com/api/offers/"
+RECRUITEE_API = "https://{host}/api/offers/"
 
 REQUEST_TIMEOUT = 20
+
+# Free-text keyword matching for sources that don't give a structured
+# country code (Greenhouse, Lever). Deliberately conservative — country
+# name plus a handful of major cities, not an exhaustive gazetteer.
+_COUNTRY_KEYWORDS: dict[str, list[str]] = {
+    "AU": ["australia", "sydney", "melbourne", "brisbane", "perth", "adelaide",
+           "canberra", "gold coast", "newcastle", "wollongong", "hobart", "darwin"],
+    "NL": ["netherlands", "nederland", "holland", "amsterdam", "rotterdam",
+           "utrecht", "the hague", "den haag", "eindhoven", "arnhem",
+           "groningen", "tilburg", "nijmegen", "breda", "almere"],
+    "VN": ["vietnam", "viet nam", "hanoi", "ha noi", "ho chi minh", "hcmc",
+           "da nang", "hai phong", "can tho"],
+}
+_REMOTE_KEYWORDS = ["remote", "anywhere", "distributed", "work from home"]
 
 
 @dataclass
@@ -50,6 +81,46 @@ class Job:
     description_raw: str
     country_hint: str      # which JurisdictionProfile this was fetched for
     fetched_at: float
+    posted_at: float | None = None       # epoch seconds, when the source provides one
+    company_name: str = ""
+    salary_min: float | None = None
+    salary_max: float | None = None
+    salary_currency: str | None = None
+    salary_period: str | None = None     # "year" | "month" | "hour" | None
+    # Internal-only, not persisted: structured country signal from the
+    # source (ISO alpha-2) when available, used by _location_matches below.
+    _source_country_code: str | None = field(default=None, repr=False, compare=False)
+
+
+def _location_matches(job: Job, country_code: str) -> bool:
+    """True if this job plausibly belongs to the target country. Prefers a
+    structured country code from the source; falls back to keyword matching
+    on the free-text location; a remote-sounding location with no country
+    signal either way is let through rather than guessed at."""
+    if job._source_country_code:
+        return job._source_country_code.upper() == country_code.upper()
+
+    text = (job.location_raw or "").lower()
+    if any(kw in text for kw in _COUNTRY_KEYWORDS.get(country_code, [])):
+        return True
+    if any(kw in text for kw in _REMOTE_KEYWORDS):
+        return True
+    # No location text at all — don't discard on absence of a signal.
+    if not text.strip():
+        return True
+    return False
+
+
+def _parse_iso_to_epoch(value: str | None) -> float | None:
+    if not value:
+        return None
+    try:
+        # Handles "2026-08-19 12:21:10 UTC" and "2026-08-19T12:21:10Z" style
+        # timestamps seen across these APIs.
+        cleaned = value.replace(" UTC", "+00:00").replace("Z", "+00:00")
+        return datetime.fromisoformat(cleaned).timestamp()
+    except ValueError:
+        return None
 
 
 def fetch_greenhouse_board(board_token: str, country_hint: str) -> list[Job]:
@@ -64,19 +135,20 @@ def fetch_greenhouse_board(board_token: str, country_hint: str) -> list[Job]:
 
     jobs: list[Job] = []
     for posting in data.get("jobs", []):
-        jobs.append(
-            Job(
-                source="greenhouse",
-                board_or_company=board_token,
-                external_id=str(posting.get("id")),
-                title=posting.get("title", ""),
-                location_raw=(posting.get("location") or {}).get("name", ""),
-                url=posting.get("absolute_url", ""),
-                description_raw=posting.get("content", "") or "",
-                country_hint=country_hint,
-                fetched_at=time.time(),
-            )
+        job = Job(
+            source="greenhouse",
+            board_or_company=board_token,
+            external_id=str(posting.get("id")),
+            title=posting.get("title", ""),
+            location_raw=(posting.get("location") or {}).get("name", ""),
+            url=posting.get("absolute_url", ""),
+            description_raw=posting.get("content", "") or "",
+            country_hint=country_hint,
+            fetched_at=time.time(),
+            posted_at=_parse_iso_to_epoch(posting.get("first_published") or posting.get("updated_at")),
+            company_name=posting.get("company_name", "") or board_token,
         )
+        jobs.append(job)
     robots_check.polite_delay()
     return jobs
 
@@ -89,24 +161,28 @@ def fetch_lever_board(company_slug: str, country_hint: str) -> list[Job]:
     resp = requests.get(url, timeout=REQUEST_TIMEOUT)
     resp.raise_for_status()
     data = resp.json()
+    if not isinstance(data, list):
+        return []  # {"ok": false, ...} — board slug doesn't exist / no postings
 
     jobs: list[Job] = []
     for posting in data:
         categories = posting.get("categories", {}) or {}
-        jobs.append(
-            Job(
-                source="lever",
-                board_or_company=company_slug,
-                external_id=str(posting.get("id")),
-                title=posting.get("text", ""),
-                location_raw=categories.get("location", ""),
-                url=posting.get("hostedUrl", ""),
-                description_raw=(posting.get("descriptionPlain")
-                                 or posting.get("description") or ""),
-                country_hint=country_hint,
-                fetched_at=time.time(),
-            )
+        created_at_ms = posting.get("createdAt")
+        job = Job(
+            source="lever",
+            board_or_company=company_slug,
+            external_id=str(posting.get("id")),
+            title=posting.get("text", ""),
+            location_raw=categories.get("location", ""),
+            url=posting.get("hostedUrl", ""),
+            description_raw=(posting.get("descriptionPlain")
+                             or posting.get("description") or ""),
+            country_hint=country_hint,
+            fetched_at=time.time(),
+            posted_at=(created_at_ms / 1000.0) if isinstance(created_at_ms, (int, float)) else None,
+            company_name=company_slug,
         )
+        jobs.append(job)
     robots_check.polite_delay()
     return jobs
 
@@ -114,7 +190,9 @@ def fetch_lever_board(company_slug: str, country_hint: str) -> list[Job]:
 def fetch_workable_board(account_slug: str, country_hint: str) -> list[Job]:
     """Fetch all live postings for one Workable account's public widget feed.
     No auth required; this endpoint does not support filtering/search, so it
-    always returns the account's full current listing."""
+    always returns the account's full current listing — which can span
+    multiple countries (see module docstring), hence the country_code capture
+    for the location filter in fetch_all()."""
     url = WORKABLE_API.format(account=account_slug)
     robots_check.assert_allowed(url, target_label=f"workable:{account_slug}")
 
@@ -124,28 +202,40 @@ def fetch_workable_board(account_slug: str, country_hint: str) -> list[Job]:
 
     jobs: list[Job] = []
     for posting in data.get("jobs", []):
-        jobs.append(
-            Job(
-                source="workable",
-                board_or_company=account_slug,
-                external_id=str(posting.get("shortcode") or posting.get("id", "")),
-                title=posting.get("title", ""),
-                location_raw=posting.get("location", {}).get("location_str", "")
-                if isinstance(posting.get("location"), dict) else str(posting.get("location", "")),
-                url=posting.get("url", ""),
-                description_raw=posting.get("description", "") or "",
-                country_hint=country_hint,
-                fetched_at=time.time(),
-            )
+        location = posting.get("location", {})
+        location_str = location.get("location_str", "") if isinstance(location, dict) else str(location or "")
+        locations_list = posting.get("locations") or []
+        country_code = None
+        if locations_list and isinstance(locations_list[0], dict):
+            country_code = locations_list[0].get("countryCode")
+
+        job = Job(
+            source="workable",
+            board_or_company=account_slug,
+            external_id=str(posting.get("shortcode") or posting.get("id", "")),
+            title=posting.get("title", ""),
+            location_raw=location_str or f"{posting.get('city', '')}, {posting.get('country', '')}".strip(", "),
+            url=posting.get("url", ""),
+            description_raw=posting.get("description", "") or "",
+            country_hint=country_hint,
+            fetched_at=time.time(),
+            posted_at=_parse_iso_to_epoch(posting.get("published_on") or posting.get("created_at")),
+            company_name=account_slug,
         )
+        job._source_country_code = country_code
+        jobs.append(job)
     robots_check.polite_delay()
     return jobs
 
 
-def fetch_recruitee_board(company_slug: str, country_hint: str) -> list[Job]:
+def fetch_recruitee_board(company_slug: str, country_hint: str, host: str | None = None) -> list[Job]:
     """Fetch all live postings for one Recruitee company careers site. No
-    auth required; description is returned as full HTML in the list call."""
-    url = RECRUITEE_API.format(company=company_slug)
+    auth required; description is returned as full HTML in the list call.
+    `host` overrides the default <slug>.recruitee.com pattern for customers
+    who white-label onto their own domain (e.g. Allego -> join.allego.eu) —
+    the API path structure is unchanged, just the hostname."""
+    actual_host = host or f"{company_slug}.recruitee.com"
+    url = RECRUITEE_API.format(host=actual_host)
     robots_check.assert_allowed(url, target_label=f"recruitee:{company_slug}")
 
     resp = requests.get(url, timeout=REQUEST_TIMEOUT)
@@ -155,27 +245,36 @@ def fetch_recruitee_board(company_slug: str, country_hint: str) -> list[Job]:
     jobs: list[Job] = []
     for posting in data.get("offers", []):
         location = posting.get("location") or posting.get("city", "") or ""
-        jobs.append(
-            Job(
-                source="recruitee",
-                board_or_company=company_slug,
-                external_id=str(posting.get("id")),
-                title=posting.get("title", ""),
-                location_raw=location,
-                url=f"https://{company_slug}.recruitee.com/o/{posting.get('slug', '')}",
-                description_raw=posting.get("description", "") or "",
-                country_hint=country_hint,
-                fetched_at=time.time(),
-            )
+        salary = posting.get("salary") or {}
+        job = Job(
+            source="recruitee",
+            board_or_company=company_slug,
+            external_id=str(posting.get("id")),
+            title=posting.get("title", ""),
+            location_raw=location,
+            url=f"https://{actual_host}/o/{posting.get('slug', '')}",
+            description_raw=posting.get("description", "") or "",
+            country_hint=country_hint,
+            fetched_at=time.time(),
+            posted_at=_parse_iso_to_epoch(posting.get("published_at") or posting.get("created_at")),
+            company_name=posting.get("company_name", "") or company_slug,
+            salary_min=salary.get("min"),
+            salary_max=salary.get("max"),
+            salary_currency=salary.get("currency"),
+            salary_period=salary.get("period"),
         )
+        job._source_country_code = posting.get("country_code")
+        jobs.append(job)
     robots_check.polite_delay()
     return jobs
 
 
 def fetch_all(jurisdiction) -> list[Job]:
-    """Fetch every configured Greenhouse/Lever board for one JurisdictionProfile.
-    Individual board failures are logged and skipped rather than aborting the
-    whole run — one dead board token shouldn't take down the other nine."""
+    """Fetch every configured board for one JurisdictionProfile, then drop
+    any job whose actual location doesn't match that jurisdiction's country
+    (see module docstring — a board can span multiple countries). Individual
+    board failures are logged and skipped rather than aborting the whole
+    run — one dead board token shouldn't take down the other nine."""
     results: list[Job] = []
     for board in jurisdiction.greenhouse_boards:
         try:
@@ -201,8 +300,24 @@ def fetch_all(jurisdiction) -> list[Job]:
         except Exception as exc:  # noqa: BLE001
             print(f"[connectors] recruitee:{company} failed: {exc}")
 
-    return results
+    for label, host in getattr(jurisdiction, "recruitee_custom_domains", {}).items():
+        try:
+            results.extend(fetch_recruitee_board(label, jurisdiction.country_code, host=host))
+        except Exception as exc:  # noqa: BLE001
+            print(f"[connectors] recruitee:{label} ({host}) failed: {exc}")
+
+    matched = [j for j in results if _location_matches(j, jurisdiction.country_code)]
+    dropped = len(results) - len(matched)
+    if dropped:
+        print(
+            f"[connectors] {jurisdiction.name}: dropped {dropped} job(s) whose "
+            f"location didn't match {jurisdiction.country_code} (board spans "
+            f"multiple countries)."
+        )
+    return matched
 
 
 def job_to_dict(job: Job) -> dict[str, Any]:
-    return asdict(job)
+    d = asdict(job)
+    d.pop("_source_country_code", None)
+    return d

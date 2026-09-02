@@ -58,6 +58,11 @@ class JurisdictionProfile:
     workable_boards: list[str] = field(default_factory=list)
     # Recruitee subdomains (from <slug>.recruitee.com)
     recruitee_boards: list[str] = field(default_factory=list)
+    # Some Recruitee customers white-label onto their own domain instead of
+    # <slug>.recruitee.com (e.g. Allego uses join.allego.eu) — the API path
+    # structure is unchanged, just the host. Keyed by a label (for logging)
+    # -> full custom hostname.
+    recruitee_custom_domains: dict[str, str] = field(default_factory=dict)
     # Non-ATS job boards to eventually add bespoke connectors for.
     # Kept here as a checklist, not implemented in this skeleton.
     local_job_boards: list[str] = field(default_factory=list)
@@ -130,7 +135,17 @@ JURISDICTIONS: dict[str, JurisdictionProfile] = {
         # charging infrastructure, not vehicle manufacturing, but its program/
         # ops roles are a genuine adjacent-sector fit for VAVE/cost-engineering
         # and program-management background.
-        recruitee_boards=["fastned"],
+        # Allego (EV charging infra, Arnhem) and GreenFlux (EV charge-point
+        # management SaaS, Amsterdam) and Eneco eMobility (smart EV
+        # charging, NL/BE/LUX) confirmed via live web research (Sep 2026) —
+        # all three on Recruitee. GreenFlux's careers page explicitly
+        # advertises "visa sponsorship and relocation compensation to
+        # expats" — a strong positive signal given the employer-sponsored-
+        # only stance. Note: Allego is white-labeled at join.allego.eu
+        # (not <slug>.recruitee.com) — confirm this connector handles a
+        # custom domain, not just the default subdomain pattern.
+        recruitee_boards=["fastned", "greenflux", "enecoemobility"],
+        recruitee_custom_domains={"allego": "join.allego.eu"},
         local_job_boards=["indeed.nl", "nationalevacaturebank.nl", "linkedin.com"],
         max_jobs_per_run=150,
         max_llm_tokens_per_run=150_000,
@@ -167,11 +182,15 @@ JURISDICTIONS: dict[str, JurisdictionProfile] = {
         greenhouse_boards=[], lever_boards=[],
         # Applied EV (Melbourne autonomous/electric commercial-vehicle
         # platform maker) found via web research (Sep 2026) recruiting on
-        # Workable under the apply.workable.com/applied-ev URL. Medium
-        # confidence — confirm the exact slug against the live careers page
-        # before relying on it, since Workable slugs aren't always identical
-        # to the public apply-page path.
-        workable_boards=["applied-ev"],
+        # Workable under the apply.workable.com/applied-ev URL — re-verified
+        # live (Sep 2026) but currently has ZERO open roles on this feed;
+        # keep configured since that changes over time. Zoomo (light-EV
+        # last-mile delivery fleets, AU-founded/global) confirmed live on
+        # Workable too — note its feed isn't country-filtered (returns jobs
+        # across AU/UK/US/EU), which is exactly why fetch_all() applies a
+        # per-jurisdiction location filter rather than trusting the board
+        # list alone.
+        workable_boards=["applied-ev", "zoomo"],
         recruitee_boards=[],
         local_job_boards=["seek.com.au", "indeed.com.au", "linkedin.com"],
         max_jobs_per_run=250,  # AU volume via Seek/Indeed tends to be higher

@@ -19,7 +19,7 @@ import time
 
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 
-from . import db, cover_letter, resume_contract
+from . import db, cover_letter, resume_contract, manual_job
 from .config import JURISDICTIONS
 
 app = Flask(__name__)
@@ -87,7 +87,27 @@ def _shape_job_row(row) -> dict:
     d["country_name"] = jurisdiction.name if jurisdiction else d["country_hint"]
     d["currency"] = jurisdiction.currency if jurisdiction else ""
 
+    posted_at = d.get("posted_at")
+    d["days_since_posted"] = int((time.time() - posted_at) // 86400) if posted_at else None
+
     return d
+
+
+def _compute_kpis(jobs: list[dict]) -> dict:
+    total = len(jobs)
+    if total == 0:
+        return {"total": 0, "avg_match_pct": None, "avg_salary_usd_month": None, "sponsorship_confirmed": 0}
+
+    match_pcts = [j["match_pct"] for j in jobs if j.get("match_pct") is not None]
+    salaries = [j["salary_usd_month_min"] for j in jobs if j.get("salary_usd_month_min") is not None]
+    sponsorship_confirmed = sum(1 for j in jobs if j.get("eligibility_verdict") == "likely_eligible")
+
+    return {
+        "total": total,
+        "avg_match_pct": round(sum(match_pcts) / len(match_pcts), 1) if match_pcts else None,
+        "avg_salary_usd_month": round(sum(salaries) / len(salaries)) if salaries else None,
+        "sponsorship_confirmed": sponsorship_confirmed,
+    }
 
 
 @app.route("/")
@@ -98,13 +118,31 @@ def index():
 @app.route("/jobs")
 def jobs_view():
     country = request.args.get("country", "ALL")
+    days_posted = request.args.get("days_posted", "").strip()
+    location = request.args.get("location", "").strip()
+    company = request.args.get("company", "").strip()
+    min_match = request.args.get("min_match", "").strip()
+    sponsorship = request.args.get("sponsorship", "").strip()
+    min_salary = request.args.get("min_salary", "").strip()
+
+    filter_kwargs = dict(
+        country=None if country == "ALL" else country,
+        posted_within_days=int(days_posted) if days_posted.isdigit() else None,
+        location_contains=location or None,
+        company_contains=company or None,
+        min_match_pct=float(min_match) if min_match else None,
+        eligibility_verdict=sponsorship or None,
+        min_salary_usd_month=float(min_salary) if min_salary else None,
+    )
+
     conn = db.get_connection()
     try:
-        rows = db.list_jobs(conn, country=None if country == "ALL" else country)
+        rows = db.list_jobs(conn, **filter_kwargs)
     finally:
         conn.close()
 
     jobs = [_shape_job_row(r) for r in rows]
+    kpis = _compute_kpis(jobs)
 
     conn = db.get_connection()
     try:
@@ -122,7 +160,30 @@ def jobs_view():
         counts=counts,
         statuses=db.VALID_APPLICATION_STATUSES,
         FOLLOW_UP_THRESHOLD_DAYS=FOLLOW_UP_THRESHOLD_DAYS,
+        kpis=kpis,
+        filters={
+            "days_posted": days_posted, "location": location, "company": company,
+            "min_match": min_match, "sponsorship": sponsorship, "min_salary": min_salary,
+        },
     )
+
+
+@app.route("/jobs/manual", methods=["POST"])
+def add_manual_job():
+    redirect_country = request.form.get("redirect_country", "ALL")
+    try:
+        manual_job.ingest_manual_job(
+            url=request.form.get("url", ""),
+            title=request.form.get("title", ""),
+            company=request.form.get("company", ""),
+            location=request.form.get("location", ""),
+            description=request.form.get("description", ""),
+            country_code=request.form.get("country_code", ""),
+        )
+    except manual_job.ManualJobError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    return redirect(url_for("jobs_view", country=redirect_country))
 
 
 @app.route("/jobs/<path:job_id>/status", methods=["POST"])

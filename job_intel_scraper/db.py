@@ -35,6 +35,12 @@ CREATE TABLE IF NOT EXISTS jobs (
     application_status TEXT DEFAULT 'not_applied',  -- applied/interview/offer/rejected
     application_notes TEXT,
     applied_at REAL,
+    posted_at REAL,                  -- epoch seconds, when the source provides one
+    company_name TEXT,
+    salary_usd_month_min REAL,       -- approx pay in USD/month; NULL = not disclosed
+    salary_usd_month_max REAL,
+    salary_note TEXT,                -- how the figure was derived (structured/extracted/not disclosed)
+    origin TEXT DEFAULT 'scraped',   -- 'scraped' | 'manual' (pasted via the dashboard)
     first_seen_at REAL NOT NULL,
     last_seen_at REAL NOT NULL
 );
@@ -59,16 +65,21 @@ def get_connection() -> sqlite3.Connection:
     return conn
 
 
-def upsert_job(conn: sqlite3.Connection, job, breakdown, eligibility) -> str:
+def upsert_job(conn: sqlite3.Connection, job, breakdown, eligibility, salary_estimate=None, origin: str = "scraped") -> str:
     job_id = f"{job.source}:{job.board_or_company}:{job.external_id}"
     now = time.time()
+    salary_min = salary_estimate.usd_per_month_min if salary_estimate else None
+    salary_max = salary_estimate.usd_per_month_max if salary_estimate else None
+    salary_note = salary_estimate.note if salary_estimate else None
     conn.execute(
         """
         INSERT INTO jobs (
             id, source, board_or_company, country_hint, title, location_raw,
             url, description_raw, stage1_score, stage1_breakdown,
-            eligibility_verdict, eligibility_note, first_seen_at, last_seen_at
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            eligibility_verdict, eligibility_note, posted_at, company_name,
+            salary_usd_month_min, salary_usd_month_max, salary_note, origin,
+            first_seen_at, last_seen_at
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(id) DO UPDATE SET
             title=excluded.title,
             location_raw=excluded.location_raw,
@@ -77,13 +88,21 @@ def upsert_job(conn: sqlite3.Connection, job, breakdown, eligibility) -> str:
             stage1_breakdown=excluded.stage1_breakdown,
             eligibility_verdict=excluded.eligibility_verdict,
             eligibility_note=excluded.eligibility_note,
+            posted_at=excluded.posted_at,
+            company_name=excluded.company_name,
+            salary_usd_month_min=excluded.salary_usd_month_min,
+            salary_usd_month_max=excluded.salary_usd_month_max,
+            salary_note=excluded.salary_note,
             last_seen_at=excluded.last_seen_at
         """,
         (
             job_id, job.source, job.board_or_company, job.country_hint,
             job.title, job.location_raw, job.url, job.description_raw,
             breakdown.total, json.dumps(breakdown.by_category),
-            eligibility.verdict, eligibility.note, now, now,
+            eligibility.verdict, eligibility.note,
+            getattr(job, "posted_at", None), getattr(job, "company_name", "") or job.board_or_company,
+            salary_min, salary_max, salary_note, origin,
+            now, now,
         ),
     )
     conn.commit()
@@ -135,25 +154,69 @@ def record_llm_result(conn: sqlite3.Connection, job_id: str, result) -> None:
 VALID_APPLICATION_STATUSES = ("not_applied", "applied", "interview", "offer", "rejected")
 
 
-def list_jobs(conn: sqlite3.Connection, country: str | None = None) -> list[sqlite3.Row]:
+def list_jobs(
+    conn: sqlite3.Connection,
+    country: str | None = None,
+    posted_within_days: int | None = None,
+    location_contains: str | None = None,
+    company_contains: str | None = None,
+    min_match_pct: float | None = None,
+    eligibility_verdict: str | None = None,
+    min_salary_usd_month: float | None = None,
+) -> list[sqlite3.Row]:
     """Jobs for the dashboard, best-scored first. Ranks by the LLM score when
     a job has been stage-2 scored (a real semantic-fit judgment), falling
     back to the stage-1 composite for everything else — so a strong stage-1
     match that hasn't been through stage 2 yet doesn't get buried under
-    weaker stage-2-scored jobs."""
+    weaker stage-2-scored jobs.
+
+    display_score is the raw 0-100(ish) composite; match_pct normalizes it
+    against the maximum possible stage-1 total (sum of scorer.WEIGHTS) so
+    the dashboard can filter/display "match %" on a consistent 0-100 scale
+    regardless of whether a job has been stage-2 scored yet.
+    """
+    from .scorer import WEIGHTS
+    max_possible = sum(WEIGHTS.values())
+
     conn.row_factory = sqlite3.Row
-    query = """
-        SELECT *, COALESCE(llm_score, stage1_score) AS display_score
+    clauses: list[str] = []
+    params: list = []
+
+    if country:
+        clauses.append("country_hint = ?")
+        params.append(country)
+    if posted_within_days is not None:
+        cutoff = time.time() - posted_within_days * 86400
+        # Jobs with no posted_at at all are kept rather than silently
+        # dropped by a recency filter that can't evaluate them — an
+        # unknown post date isn't evidence the posting is stale.
+        clauses.append("(posted_at IS NULL OR posted_at >= ?)")
+        params.append(cutoff)
+    if location_contains:
+        clauses.append("LOWER(location_raw) LIKE ?")
+        params.append(f"%{location_contains.lower()}%")
+    if company_contains:
+        clauses.append("LOWER(company_name) LIKE ?")
+        params.append(f"%{company_contains.lower()}%")
+    if min_match_pct is not None:
+        clauses.append("(COALESCE(llm_score, stage1_score) / ?) * 100 >= ?")
+        params.extend([max_possible, min_match_pct])
+    if eligibility_verdict:
+        clauses.append("eligibility_verdict = ?")
+        params.append(eligibility_verdict)
+    if min_salary_usd_month is not None:
+        clauses.append("salary_usd_month_min >= ?")
+        params.append(min_salary_usd_month)
+
+    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    query = f"""
+        SELECT *, COALESCE(llm_score, stage1_score) AS display_score,
+               (COALESCE(llm_score, stage1_score) / {max_possible}) * 100 AS match_pct
         FROM jobs
         {where}
         ORDER BY display_score DESC, first_seen_at DESC
     """
-    if country:
-        rows = conn.execute(
-            query.format(where="WHERE country_hint = ?"), (country,)
-        ).fetchall()
-    else:
-        rows = conn.execute(query.format(where="")).fetchall()
+    rows = conn.execute(query, params).fetchall()
     conn.row_factory = None
     return rows
 

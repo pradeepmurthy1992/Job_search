@@ -12,10 +12,42 @@ and Australia scoped beyond pure automotive per the 2026-09 expansion note.
 **Real / runnable:**
 - `robots_check.py` — enforces the "never scrape a disallowed target" rule
   for every connector, fails closed if robots.txt can't even be fetched.
+  Uses `protego` (Scrapy's robots.txt library), not the stdlib
+  `urllib.robotparser` — the stdlib parser doesn't implement the `*`/`$`
+  wildcard extension real sites rely on (observed live: it silently
+  misread Seek's `Disallow: */job/` as never matching anything, which
+  would have let a genuinely-disallowed path through) and also chokes on a
+  robots.txt served with a leading UTF-8 BOM (observed on
+  vietnamworks.com), which this module strips before parsing.
 - `connectors.py` — actual HTTP calls against the public Greenhouse, Lever,
-  Workable, and Recruitee JSON APIs. Works as soon as you add real board
-  tokens in `config.py` (two are already filled in from research — see
-  "Verified target companies" below).
+  Workable, and Recruitee JSON APIs, with real board tokens for Fastned,
+  Allego, GreenFlux, Eneco eMobility (NL, Recruitee — Allego is
+  white-labeled at `join.allego.eu`, not `<slug>.recruitee.com`), and
+  Applied EV, Zoomo (AU, Workable) — see "Verified target companies"
+  below. Also captures posting date and, where the source provides it
+  (Recruitee), a structured salary field. A company's board can span
+  multiple countries (observed live: Zoomo's Workable feed returned UK
+  roles under an Australia-focused search) — `fetch_all()` drops any job
+  whose actual location doesn't match the jurisdiction being fetched,
+  using a structured country code from the source when available and
+  free-text keyword matching otherwise.
+- `salary.py` — approximate pay-in-USD/month, checking each source's
+  structured salary field first (Recruitee provides one) and falling back
+  to regex extraction from the JD text otherwise. Never estimates a figure
+  for a posting that doesn't state one ("not disclosed", not a guess), and
+  guards against real false positives found during testing — a bare
+  currency+number+period match can hit a training budget or a revenue
+  figure instead of an actual salary (Fastned's "training and development
+  budget of €3,000 per year" matched the naive pattern before this was
+  fixed), so extraction rejects matches near non-salary context words
+  (budget, bonus, revenue, funding, allowance, etc.) and applies a
+  plausibility floor/ceiling. FX rates are a static, manually-maintained
+  table (`FX_TO_USD`) — no live-rate API, so no new dependency; re-check
+  periodically, same pattern as the NL visa threshold in `config.py`.
+- `manual_job.py` — the platform overview's documented manual-paste
+  workflow for sources that can't be automated (see below): runs pasted
+  postings through the identical scorer/eligibility/salary pipeline as a
+  scraped job.
 - `eligibility.py` — keyword-based sponsorship / citizenship-restriction /
   language-requirement detection, kept as a separate visible signal from the
   fit score on purpose.
@@ -49,8 +81,12 @@ and Australia scoped beyond pure automotive per the 2026-09 expansion note.
   both scoring layers side by side, the eligibility signal as its own
   visible column (never blended into a score), a VN/NL/AU country filter,
   application-status tracking (applied/interview/offer/rejected, notes,
-  days-since-applied), and an on-demand "Generate Cover Letter" button per
-  job with live status polling.
+  days-since-applied), an on-demand "Generate Cover Letter" button per job
+  with live status polling, and a filter bar (posted-within, location,
+  company, min match %, sponsorship verdict, min salary) backed by real
+  SQL filtering in `db.list_jobs()`, not client-side JS. KPI cards up top
+  (total jobs, avg match %, avg stated salary, sponsorship-confirmed
+  count) and an "Add a job manually" form wired to `manual_job.py`.
 - `cover_letter.py` — on-demand LaTeX cover-letter generation, triggered
   only for one specific job at a time (never automatically for every
   match). Runs the git-tracking guard and the resume data-contract check
@@ -67,15 +103,27 @@ and Australia scoped beyond pure automotive per the 2026-09 expansion note.
   later taken down. This archive directory is gitignored and covered by
   `git_guard.py`, same sensitivity class as the resume itself.
 
-**Stubbed, on purpose:**
-- Local job-board connectors (Seek, Indeed.nl, VietnamWorks, TopCV, etc.) —
-  each needs its own robots.txt/ToS review before a scraper gets written
-  against it; they're listed in `config.py` as a checklist, not implemented,
-  so nothing gets built without that review actually happening. For
-  Australia especially, treat this as the priority gap: most real target
-  employers there (mining/rail/infrastructure corporates) run Workday or
-  SuccessFactors, which neither this skeleton nor a lightweight JSON API
-  covers — Seek/Indeed scraping is the realistic near-term path.
+**Evaluated and deliberately NOT automated (use the manual-paste form instead):**
+- **Seek.com.au, Indeed.com.au, Indeed.nl, TopCV.vn** — robots.txt actually
+  *permits* their search-listing pages (checked with `protego`, correctly
+  this time), but their real servers return HTTP 403 to an honestly-
+  identified bot regardless — infrastructure-level blocking, not a
+  robots.txt matter. Not worked around (no browser fingerprint spoofing,
+  no proxy rotation) — same "not an exception" policy as robots.txt itself.
+- **VietnamWorks** — robots.txt allows it and the server doesn't block the
+  request, but its job listings only materialize via client-side
+  JavaScript after page load (no server-rendered content, no discoverable
+  JSON API) — would need a full headless-browser dependency to automate,
+  which is out of scope here.
+- **CareerBuilder.vn** — TLS certificate is expired; can't be fetched over
+  HTTPS at all regardless of policy.
+- For all of the above, `manual_job.py` + the dashboard's "Add a job
+  manually" form is the intended path: browse it yourself, paste the
+  URL/title/company/location/description, and it scores identically to a
+  scraped job. This is the platform overview's own documented answer for
+  exactly this situation, not a new design decision.
+
+**Still stubbed:**
 - The AES-256-GCM mobile export from the platform overview isn't part of
   this codebase yet.
 
@@ -118,24 +166,49 @@ which is itself useful information:
   engineering background). Confirmed on **Recruitee** at
   `fastned.recruitee.com`. High confidence — found directly in search
   results as the company's own domain. Pre-filled in `config.py`.
+- **Allego (Netherlands)** — EV charging infrastructure (Arnhem). Confirmed
+  on **Recruitee**, white-labeled at `join.allego.eu` (not the default
+  `<slug>.recruitee.com` pattern — `config.py`'s `recruitee_custom_domains`
+  handles this). High confidence, live-verified. A different, unrelated US
+  company also named "Allego" is on Workable at
+  `apply.workable.com/allego-1` — confirmed NOT the same company; don't
+  reuse that slug.
+- **GreenFlux (Netherlands)** — EV charge-point management SaaS
+  (Amsterdam). Confirmed on **Recruitee** at `greenflux.recruitee.com`.
+  High confidence. Careers page explicitly advertises visa sponsorship and
+  relocation compensation for expats.
+- **Eneco eMobility (Netherlands)** — smart EV charging (NL/BE/LUX).
+  Confirmed on **Recruitee** at `enecoemobility.recruitee.com`. High
+  confidence. Several roles state a real structured salary (EUR/month).
 - **Applied EV (Australia)** — Melbourne autonomous/electric commercial-
-  vehicle platform maker. Found recruiting via **Workable** at
-  `apply.workable.com/applied-ev`. Medium confidence — confirm the exact
-  account slug against the live careers page before relying on it. Pre-
-  filled in `config.py`.
-- **Vietnam** — no automotive/EV employer was confirmed on Greenhouse,
-  Lever, Workable, or Recruitee. Selex Motors (the most plausible EV
-  scale-up match) recruits via Facebook/ITviec/LinkedIn, not a scrapable
-  public ATS API. Vietnam discovery will have to lean on local job boards
-  (VietnamWorks, TopCV, CareerBuilder.vn) rather than direct ATS connectors.
+  vehicle platform maker. Confirmed on **Workable** at
+  `apply.workable.com/applied-ev` — live-reverified Sep 2026, but currently
+  has **zero** open roles on this feed; kept configured since that changes.
+- **Zoomo (Australia-founded, now global)** — light EVs (e-bikes/scooters)
+  for last-mile delivery fleets. Confirmed on **Workable** at
+  `apply.workable.com/zoomo`. High confidence, but its feed is NOT
+  country-filtered — currently only has UK-based roles open, which
+  `fetch_all()`'s location filter correctly excludes from the AU results
+  rather than mislabeling them.
+- **Vietnam** — still zero automotive/EV/manufacturing employers confirmed
+  on Greenhouse, Lever, Workable, or Recruitee, re-verified Sep 2026.
+  VinFast is on Zoho Recruit, Bosch (Vietnam and likely globally) on
+  SmartRecruiters, Thaco/Toyota/Honda/Ford Vietnam recruit via
+  Facebook/local boards with no dedicated ATS, Selex Motors and Dat Bike
+  the same. VietnamWorks was evaluated as a scraping target (see "Evaluated
+  and deliberately NOT automated" above) and isn't automatable without a
+  headless-browser dependency — use the manual-paste form for Vietnam.
 - **Tritium and SEA Electric (Australia)** — both real EV-adjacent
   companies, but found on Employment Hero / bespoke career sites, not any
   of the four ATS platforms this skeleton connects to.
 
 Bottom line: Greenhouse/Lever/Workable/Recruitee cover a real but small
-slice of these three markets — mostly scale-ups, not the larger corporates.
-Don't expect this connector set alone to surface most of the actual job
-volume; it's a genuinely-working start, not full coverage.
+slice of these three markets — mostly scale-ups, not the larger corporates,
+and it changes week to week (Applied EV had open AU roles when first
+researched, zero a few weeks later). Don't expect this connector set alone
+to surface most of the actual job volume — the manual-paste workflow is
+the realistic primary path for Vietnam and for the large AU
+mining/rail/infrastructure employers, not a fallback.
 
 ## Setup
 

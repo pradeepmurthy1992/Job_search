@@ -4,48 +4,108 @@
 <meta charset="utf-8">
 <title>Job Intelligence Dashboard</title>
 <style>
-  :root { color-scheme: light; }
-  body { font-family: -apple-system, Segoe UI, Arial, sans-serif; margin: 0; padding: 0 24px 48px; background: #f6f7f9; color: #1a1d23; }
-  h1 { font-size: 20px; margin: 20px 0 4px; }
-  .subtitle { color: #666; font-size: 13px; margin-bottom: 16px; }
-  nav.tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-  nav.tabs a { text-decoration: none; padding: 6px 14px; border-radius: 999px; background: #e9ebef; color: #333; font-size: 13px; font-weight: 600; }
-  nav.tabs a.active { background: #2b5fd9; color: #fff; }
-  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
-  th, td { padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 13px; text-align: left; vertical-align: top; }
-  th { background: #fafbfc; font-weight: 600; color: #444; position: sticky; top: 0; }
-  tr:hover { background: #fbfcfe; }
-  .job-title { font-weight: 600; color: #1a1d23; text-decoration: none; }
-  .job-title:hover { text-decoration: underline; }
-  .meta { color: #777; font-size: 12px; margin-top: 2px; }
+  :root {
+    --bg: #0d0f14; --panel: #161922; --panel-2: #1e2230; --border: #2a2f3d;
+    --text: #e6e8ef; --text-dim: #9aa0b4; --text-faint: #6b7185;
+    --accent: #4f7cff; --accent-2: #7c9bff;
+    --green: #22c55e; --green-bg: rgba(34,197,94,.12);
+    --amber: #f59e0b; --amber-bg: rgba(245,158,11,.12);
+    --red: #ef4444; --red-bg: rgba(239,68,68,.12);
+  }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; margin: 0; padding: 0 28px 56px; background: var(--bg); color: var(--text); }
+  h1 { font-size: 21px; margin: 22px 0 4px; font-weight: 700; }
+  .subtitle { color: var(--text-dim); font-size: 13px; margin-bottom: 20px; }
+  a { color: var(--accent-2); }
+
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .kpi-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .kpi-label { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
+  .kpi-value { font-size: 24px; font-weight: 700; margin-top: 4px; }
+  .kpi-value .unit { font-size: 13px; color: var(--text-dim); font-weight: 500; }
+
+  nav.tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  nav.tabs a { text-decoration: none; padding: 6px 14px; border-radius: 999px; background: var(--panel-2); color: var(--text-dim); font-size: 13px; font-weight: 600; border: 1px solid var(--border); }
+  nav.tabs a.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  form.filter-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
+  .filter-field { display: flex; flex-direction: column; gap: 4px; }
+  .filter-field label { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .03em; font-weight: 600; }
+  .filter-field input, .filter-field select { background: var(--panel-2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 6px 8px; font-size: 13px; min-width: 120px; }
+  .filter-actions { display: flex; gap: 8px; margin-left: auto; }
+  button.btn, a.btn { font: inherit; background: var(--accent); color: #fff; border: none; padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; text-decoration: none; display: inline-block; }
+  button.btn:hover, a.btn:hover { background: var(--accent-2); }
+  a.btn.secondary, button.btn.secondary { background: var(--panel-2); color: var(--text-dim); border: 1px solid var(--border); }
+
+  details.manual-add { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 16px; }
+  details.manual-add summary { padding: 12px 16px; cursor: pointer; font-weight: 600; font-size: 13px; color: var(--text); list-style: none; }
+  details.manual-add summary::-webkit-details-marker { display: none; }
+  details.manual-add summary::before { content: "+ "; color: var(--accent-2); }
+  details.manual-add[open] summary::before { content: "\2212 "; }
+  .manual-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px 16px; }
+  .manual-form-grid .span2 { grid-column: 1 / -1; }
+  .manual-form-grid label { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .03em; font-weight: 600; display: block; margin-bottom: 4px; }
+  .manual-form-grid input, .manual-form-grid select, .manual-form-grid textarea { width: 100%; background: var(--panel-2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 7px 9px; font-size: 13px; }
+  .manual-form-grid textarea { min-height: 90px; resize: vertical; }
+  .manual-hint { font-size: 12px; color: var(--text-faint); padding: 0 16px 12px; }
+
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+  th, td { padding: 11px 12px; border-bottom: 1px solid var(--border); font-size: 13px; text-align: left; vertical-align: top; }
+  th { background: var(--panel-2); font-weight: 600; color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+  tr:hover td { background: rgba(255,255,255,.02); }
+  .job-title { font-weight: 600; color: var(--text); text-decoration: none; }
+  .job-title:hover { color: var(--accent-2); }
+  .meta { color: var(--text-faint); font-size: 12px; margin-top: 2px; }
+  .origin-tag { font-size: 10px; padding: 1px 6px; border-radius: 4px; background: var(--panel-2); color: var(--text-faint); margin-left: 6px; text-transform: uppercase; }
   .score { font-weight: 700; font-size: 15px; }
-  .score-bar { width: 60px; height: 6px; border-radius: 3px; background: #e5e7eb; margin-top: 4px; overflow: hidden; }
-  .score-bar-fill { height: 100%; background: #2b5fd9; }
+  .score-bar { width: 60px; height: 6px; border-radius: 3px; background: var(--panel-2); margin-top: 4px; overflow: hidden; }
+  .score-bar-fill { height: 100%; background: var(--accent); }
   .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; }
-  .badge.likely_eligible { background: #e3f7e8; color: #1c7a34; }
-  .badge.flag_for_review { background: #fff4dc; color: #92660b; }
-  .badge.hard_exclude { background: #fde5e5; color: #b02525; }
-  .elig-note { font-size: 11px; color: #888; margin-top: 4px; max-width: 220px; }
-  .country-pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: #eef1f7; font-size: 11px; font-weight: 700; color: #445; }
+  .badge.likely_eligible { background: var(--green-bg); color: var(--green); }
+  .badge.flag_for_review { background: var(--amber-bg); color: var(--amber); }
+  .badge.hard_exclude { background: var(--red-bg); color: var(--red); }
+  .elig-note { font-size: 11px; color: var(--text-faint); margin-top: 4px; max-width: 220px; }
+  .country-pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--panel-2); font-size: 11px; font-weight: 700; color: var(--text-dim); }
   select, textarea, button { font: inherit; }
-  select { padding: 4px 6px; border-radius: 5px; border: 1px solid #ccc; }
-  textarea { width: 100%; min-height: 44px; padding: 6px; border-radius: 5px; border: 1px solid #ccc; resize: vertical; font-size: 12px; }
+  select { padding: 4px 6px; border-radius: 5px; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); }
+  textarea { width: 100%; min-height: 44px; padding: 6px; border-radius: 5px; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); resize: vertical; font-size: 12px; }
   form.status-form { display: flex; flex-direction: column; gap: 6px; min-width: 160px; }
   .status-row { display: flex; gap: 6px; align-items: center; }
-  button.save { background: #2b5fd9; color: #fff; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; }
-  button.save:hover { background: #1e4bb8; }
-  .days-badge { font-size: 11px; color: #666; }
-  .followup-badge { display: inline-block; padding: 1px 7px; border-radius: 999px; background: #fde5e5; color: #b02525; font-size: 10px; font-weight: 700; text-transform: uppercase; margin-left: 4px; }
-  .followup-banner { background: #fff4dc; color: #7a5200; padding: 8px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; }
-  .empty { padding: 40px; text-align: center; color: #888; }
-  .reasoning { font-size: 11px; color: #555; max-width: 260px; margin-top: 4px; }
-  .grounding-ok { color: #1c7a34; }
-  .grounding-warn { color: #b02525; }
+  button.save { background: var(--accent); color: #fff; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; }
+  button.save:hover { background: var(--accent-2); }
+  .days-badge { font-size: 11px; color: var(--text-faint); }
+  .followup-badge { display: inline-block; padding: 1px 7px; border-radius: 999px; background: var(--red-bg); color: var(--red); font-size: 10px; font-weight: 700; text-transform: uppercase; margin-left: 4px; }
+  .followup-banner { background: var(--amber-bg); color: var(--amber); padding: 8px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; border: 1px solid rgba(245,158,11,.3); }
+  .salary-cell { font-weight: 600; }
+  .salary-note { font-size: 10px; color: var(--text-faint); max-width: 160px; margin-top: 2px; }
+  .empty { padding: 40px; text-align: center; color: var(--text-faint); }
+  .reasoning { font-size: 11px; color: var(--text-dim); max-width: 260px; margin-top: 4px; }
+  .grounding-ok { color: var(--green); }
+  .grounding-warn { color: var(--red); }
 </style>
 </head>
 <body>
   <h1>Job Intelligence Dashboard</h1>
-  <div class="subtitle">{{ jobs|length }} job(s) shown &mdash; stage-1 keyword score and stage-2 LLM score shown side by side; eligibility is a separate signal, never blended into either score.</div>
+  <div class="subtitle">{{ kpis.total }} job(s) shown &mdash; stage-1 keyword score and stage-2 LLM score shown side by side; eligibility is a separate signal, never blended into either score.</div>
+
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-label">Total jobs</div>
+      <div class="kpi-value">{{ kpis.total }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Avg match</div>
+      <div class="kpi-value">{{ kpis.avg_match_pct if kpis.avg_match_pct is not none else '—' }}<span class="unit">%</span></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Avg salary (stated only)</div>
+      <div class="kpi-value">{% if kpis.avg_salary_usd_month %}${{ '{:,}'.format(kpis.avg_salary_usd_month) }}{% else %}&mdash;{% endif %}<span class="unit">/mo USD</span></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Sponsorship confirmed</div>
+      <div class="kpi-value">{{ kpis.sponsorship_confirmed }}</div>
+    </div>
+  </div>
 
   <nav class="tabs">
     {% for code in country_choices %}
@@ -55,6 +115,95 @@
     {% endfor %}
   </nav>
 
+  <form class="filter-bar" method="get" action="{{ url_for('jobs_view') }}">
+    <input type="hidden" name="country" value="{{ country }}">
+    <div class="filter-field">
+      <label>Posted within</label>
+      <select name="days_posted">
+        <option value="" {{ 'selected' if not filters.days_posted else '' }}>Any time</option>
+        <option value="1" {{ 'selected' if filters.days_posted == '1' else '' }}>24 hours</option>
+        <option value="7" {{ 'selected' if filters.days_posted == '7' else '' }}>7 days</option>
+        <option value="14" {{ 'selected' if filters.days_posted == '14' else '' }}>14 days</option>
+        <option value="30" {{ 'selected' if filters.days_posted == '30' else '' }}>30 days</option>
+      </select>
+    </div>
+    <div class="filter-field">
+      <label>Location</label>
+      <input type="text" name="location" placeholder="e.g. Amsterdam" value="{{ filters.location }}">
+    </div>
+    <div class="filter-field">
+      <label>Company</label>
+      <input type="text" name="company" placeholder="e.g. Fastned" value="{{ filters.company }}">
+    </div>
+    <div class="filter-field">
+      <label>Min match %</label>
+      <select name="min_match">
+        <option value="" {{ 'selected' if not filters.min_match else '' }}>Any</option>
+        <option value="25" {{ 'selected' if filters.min_match == '25' else '' }}>25%+</option>
+        <option value="50" {{ 'selected' if filters.min_match == '50' else '' }}>50%+</option>
+        <option value="75" {{ 'selected' if filters.min_match == '75' else '' }}>75%+</option>
+      </select>
+    </div>
+    <div class="filter-field">
+      <label>Sponsorship</label>
+      <select name="sponsorship">
+        <option value="" {{ 'selected' if not filters.sponsorship else '' }}>Any</option>
+        <option value="likely_eligible" {{ 'selected' if filters.sponsorship == 'likely_eligible' else '' }}>Likely eligible</option>
+        <option value="flag_for_review" {{ 'selected' if filters.sponsorship == 'flag_for_review' else '' }}>Flag for review</option>
+        <option value="hard_exclude" {{ 'selected' if filters.sponsorship == 'hard_exclude' else '' }}>Hard exclude</option>
+      </select>
+    </div>
+    <div class="filter-field">
+      <label>Min salary USD/mo</label>
+      <input type="number" name="min_salary" placeholder="e.g. 4000" value="{{ filters.min_salary }}" min="0" step="100">
+    </div>
+    <div class="filter-actions">
+      <button class="btn" type="submit">Apply filters</button>
+      <a class="btn secondary" href="{{ url_for('jobs_view', country=country) }}">Clear</a>
+    </div>
+  </form>
+
+  <details class="manual-add">
+    <summary>Add a job manually (Seek / Indeed / TopCV / VietnamWorks / anywhere else)</summary>
+    <div class="manual-hint">These sources block automated scraping (real infrastructure-level blocks, or JS-only content) &mdash; per the platform design, paste what you find here and it runs through the exact same scoring pipeline as a scraped job.</div>
+    <form method="post" action="{{ url_for('add_manual_job') }}">
+      <input type="hidden" name="redirect_country" value="{{ country }}">
+      <div class="manual-form-grid">
+        <div class="span2">
+          <label>Job URL</label>
+          <input type="url" name="url" placeholder="https://www.seek.com.au/job/..." required>
+        </div>
+        <div>
+          <label>Title</label>
+          <input type="text" name="title" required>
+        </div>
+        <div>
+          <label>Company</label>
+          <input type="text" name="company">
+        </div>
+        <div>
+          <label>Location</label>
+          <input type="text" name="location">
+        </div>
+        <div>
+          <label>Country</label>
+          <select name="country_code" required>
+            {% for code, j in jurisdictions.items() %}
+              <option value="{{ code }}">{{ j.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="span2">
+          <label>Job description (paste full text)</label>
+          <textarea name="description" required></textarea>
+        </div>
+        <div class="span2">
+          <button class="btn" type="submit">Score and add</button>
+        </div>
+      </div>
+    </form>
+  </details>
+
   {% set followups = jobs|selectattr('needs_follow_up')|list %}
   {% if followups %}
     <div class="followup-banner">
@@ -63,15 +212,17 @@
   {% endif %}
 
   {% if not jobs %}
-    <div class="empty">No jobs yet for this filter. Run <code>python -m job_intel_scraper.main --countries {{ country if country != 'ALL' else 'VN NL AU' }}</code> to populate the database.</div>
+    <div class="empty">No jobs match this filter. Run <code>python -m job_intel_scraper.main --countries {{ country if country != 'ALL' else 'VN NL AU' }}</code>, add one manually above, or widen the filters.</div>
   {% else %}
+  <div style="overflow-x:auto;">
   <table>
     <thead>
       <tr>
         <th>Job</th>
         <th>Country</th>
-        <th>Stage&nbsp;1<br>(keyword)</th>
-        <th>Stage&nbsp;2<br>(LLM)</th>
+        <th>Posted</th>
+        <th>Match</th>
+        <th>Salary (USD/mo)</th>
         <th>Eligibility</th>
         <th>Application status</th>
         <th>Cover letter</th>
@@ -82,19 +233,28 @@
       <tr>
         <td>
           <a class="job-title" href="{{ job.url }}" target="_blank" rel="noopener">{{ job.title }}</a>
-          <div class="meta">{{ job.source }} &middot; {{ job.board_or_company }} &middot; {{ job.location_raw or 'location n/a' }}</div>
+          {% if job.origin == 'manual' %}<span class="origin-tag">manual</span>{% endif %}
+          <div class="meta">{{ job.company_name or job.board_or_company }} &middot; {{ job.location_raw or 'location n/a' }}</div>
         </td>
         <td><span class="country-pill">{{ job.country_hint }}</span><div class="meta">{{ job.currency }}</div></td>
-        <td>
-          <div class="score">{{ job.stage1_score }}</div>
-          <div class="score-bar"><div class="score-bar-fill" style="width: {{ (job.stage1_score or 0)|round|int }}%;"></div></div>
+        <td class="meta">
+          {% if job.days_since_posted is not none %}{{ job.days_since_posted }}d ago{% else %}unknown{% endif %}
         </td>
         <td>
+          <div class="score">{{ job.match_pct|round(0)|int if job.match_pct is not none else '—' }}%</div>
+          <div class="score-bar"><div class="score-bar-fill" style="width: {{ (job.match_pct or 0)|round|int }}%;"></div></div>
           {% if job.llm_scored %}
-            <div class="score">{{ job.llm_score|round(0)|int }}</div>
             {% if job.llm_reasoning %}<div class="reasoning">{{ job.llm_reasoning }}</div>{% endif %}
           {% else %}
-            <span class="meta">not scored</span>
+            <span class="meta">stage-1 only</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if job.salary_usd_month_min %}
+            <div class="salary-cell">${{ '{:,.0f}'.format(job.salary_usd_month_min) }}{% if job.salary_usd_month_max and job.salary_usd_month_max != job.salary_usd_month_min %} &ndash; ${{ '{:,.0f}'.format(job.salary_usd_month_max) }}{% endif %}</div>
+            <div class="salary-note">{{ job.salary_note }}</div>
+          {% else %}
+            <span class="meta">not disclosed</span>
           {% endif %}
         </td>
         <td>
@@ -129,6 +289,7 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
   {% endif %}
 
 <script>
