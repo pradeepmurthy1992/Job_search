@@ -110,7 +110,11 @@ def _compile_tex(tex_path: Path, output_dir: Path) -> tuple[str, str, Path | Non
                 f"-output-directory={output_dir}",
                 str(tex_path),
             ],
-            capture_output=True, text=True, timeout=60, cwd=output_dir,
+            # 180s, not 60s: a fresh MiKTeX/TeX Live install fetches missing
+            # packages (fontspec, l3packages, etc.) on the first compile,
+            # which alone can take well over a minute — a tight timeout here
+            # was observed to abort a compile that would otherwise succeed.
+            capture_output=True, text=True, timeout=180, cwd=output_dir,
         )
     except FileNotFoundError:
         return (
@@ -120,7 +124,7 @@ def _compile_tex(tex_path: Path, output_dir: Path) -> tuple[str, str, Path | Non
             None,
         )
     except subprocess.TimeoutExpired:
-        return ("compile_failed", "xelatex timed out after 60s.", None)
+        return ("compile_failed", "xelatex timed out after 180s.", None)
 
     log_path = output_dir / "compile_log.txt"
     log_path.write_text((result.stdout or "") + "\n" + (result.stderr or ""))
