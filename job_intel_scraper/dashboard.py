@@ -26,6 +26,12 @@ app = Flask(__name__)
 
 COUNTRY_CHOICES = ["ALL"] + list(JURISDICTIONS.keys())
 
+# Stalled-application follow-up threshold. A job still sitting at
+# 'applied' with no status change after this many days gets flagged in the
+# dashboard — borrowed from a comparable job-search tool's default cadence
+# (10 days) for "this is worth a nudge, not just silently waiting."
+FOLLOW_UP_THRESHOLD_DAYS = 10
+
 # In-memory cover-letter generation status, keyed by job_id — polled by the
 # dashboard's JS while a generation is running. Deliberately not persisted
 # to SQLite: this is ephemeral UI state for "is the on-demand generation I
@@ -48,6 +54,8 @@ def _run_generation(job_id: str) -> None:
                 "archive_dir": result.archive_dir,
                 "pdf_path": result.pdf_path,
                 "tex_path": result.tex_path,
+                "grounding_ok": result.grounding_ok,
+                "grounding_concerns": result.grounding_concerns,
             }
     except (cover_letter.CoverLetterError, resume_contract.ResumeContractError) as exc:
         with _letter_status_lock:
@@ -68,6 +76,11 @@ def _shape_job_row(row) -> dict:
     applied_at = d.get("applied_at")
     d["days_since_applied"] = (
         int((time.time() - applied_at) // 86400) if applied_at else None
+    )
+    d["needs_follow_up"] = (
+        d["application_status"] == "applied"
+        and d["days_since_applied"] is not None
+        and d["days_since_applied"] >= FOLLOW_UP_THRESHOLD_DAYS
     )
 
     jurisdiction = JURISDICTIONS.get(d["country_hint"])
@@ -108,6 +121,7 @@ def jobs_view():
         jurisdictions=JURISDICTIONS,
         counts=counts,
         statuses=db.VALID_APPLICATION_STATUSES,
+        FOLLOW_UP_THRESHOLD_DAYS=FOLLOW_UP_THRESHOLD_DAYS,
     )
 
 

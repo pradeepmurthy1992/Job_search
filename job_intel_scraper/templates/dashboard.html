@@ -35,8 +35,12 @@
   button.save { background: #2b5fd9; color: #fff; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; }
   button.save:hover { background: #1e4bb8; }
   .days-badge { font-size: 11px; color: #666; }
+  .followup-badge { display: inline-block; padding: 1px 7px; border-radius: 999px; background: #fde5e5; color: #b02525; font-size: 10px; font-weight: 700; text-transform: uppercase; margin-left: 4px; }
+  .followup-banner { background: #fff4dc; color: #7a5200; padding: 8px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; }
   .empty { padding: 40px; text-align: center; color: #888; }
   .reasoning { font-size: 11px; color: #555; max-width: 260px; margin-top: 4px; }
+  .grounding-ok { color: #1c7a34; }
+  .grounding-warn { color: #b02525; }
 </style>
 </head>
 <body>
@@ -50,6 +54,13 @@
       </a>
     {% endfor %}
   </nav>
+
+  {% set followups = jobs|selectattr('needs_follow_up')|list %}
+  {% if followups %}
+    <div class="followup-banner">
+      {{ followups|length }} application(s) still "applied" with no status update after {{ FOLLOW_UP_THRESHOLD_DAYS }}+ days &mdash; worth a follow-up.
+    </div>
+  {% endif %}
 
   {% if not jobs %}
     <div class="empty">No jobs yet for this filter. Run <code>python -m job_intel_scraper.main --countries {{ country if country != 'ALL' else 'VN NL AU' }}</code> to populate the database.</div>
@@ -102,6 +113,9 @@
               {% if job.days_since_applied is not none %}
                 <span class="days-badge">{{ job.days_since_applied }}d since applied</span>
               {% endif %}
+              {% if job.needs_follow_up %}
+                <span class="followup-badge">Follow up</span>
+              {% endif %}
             </div>
             <textarea name="application_notes" placeholder="notes...">{{ job.application_notes or '' }}</textarea>
             <button class="save" type="submit">Save</button>
@@ -126,7 +140,25 @@ async function pollStatus(jobId, statusEl, btnEl) {
       statusEl.textContent = data.message || 'Generating...';
       setTimeout(() => pollStatus(jobId, statusEl, btnEl), 2000);
     } else if (data.state === 'done') {
-      statusEl.textContent = `${data.compile_status}: ${data.message}`;
+      statusEl.innerHTML = '';
+      const compileLine = document.createElement('div');
+      compileLine.textContent = `${data.compile_status}: ${data.message}`;
+      statusEl.appendChild(compileLine);
+
+      const groundingLine = document.createElement('div');
+      if (data.grounding_ok === true) {
+        groundingLine.className = 'grounding-ok';
+        groundingLine.textContent = 'Grounding check: OK, no unsupported claims found.';
+      } else if (data.grounding_ok === false) {
+        groundingLine.className = 'grounding-warn';
+        const concerns = (data.grounding_concerns || []).join('; ');
+        groundingLine.textContent = `Grounding check: review before sending — ${concerns}`;
+      } else {
+        groundingLine.className = 'grounding-warn';
+        groundingLine.textContent = `Grounding check did not complete: ${(data.grounding_concerns || []).join('; ')}`;
+      }
+      statusEl.appendChild(groundingLine);
+
       btnEl.disabled = false;
       btnEl.textContent = 'Regenerate';
     } else if (data.state === 'error') {

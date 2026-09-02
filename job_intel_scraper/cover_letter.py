@@ -53,6 +53,8 @@ class CoverLetterResult:
     compile_message: str
     prompt_tokens: int
     completion_tokens: int
+    grounding_ok: bool | None  # None if the grounding-check call itself failed
+    grounding_concerns: list[str]
 
 
 def _latex_escape(text: str) -> str:
@@ -165,6 +167,18 @@ def generate_cover_letter(job_id: str) -> CoverLetterResult:
         job_description=job["description_raw"] or "",
     )
 
+    # Drafter-reviewer grounding check: a second, independent LLM pass that
+    # re-reads the drafted letter against the resume and flags any claim it
+    # doesn't actually support. Judgment-call check, not a hard stop — a
+    # failure here is surfaced for human review (dashboard + meta.json),
+    # never silently blocks the letter or the archive from being written,
+    # since a small local model can misjudge a perfectly fine letter.
+    try:
+        grounding = client.check_grounding(resume_text=resume_text, letter_body=letter.letter_body)
+        grounding_ok, grounding_concerns = grounding.ok, grounding.concerns
+    except Exception as exc:  # noqa: BLE001 - the check itself failing must not block generation
+        grounding_ok, grounding_concerns = None, [f"Grounding check call failed: {exc}"]
+
     archive_dir = APPLICATIONS_DIR / _safe_dirname(job_id) / str(int(time.time()))
     archive_dir.mkdir(parents=True, exist_ok=True)
 
@@ -198,6 +212,8 @@ def generate_cover_letter(job_id: str) -> CoverLetterResult:
         "completion_tokens": letter.completion_tokens,
         "compile_status": compile_status,
         "compile_message": compile_message,
+        "grounding_ok": grounding_ok,
+        "grounding_concerns": grounding_concerns,
         "visa_note": jurisdiction.visa_note if jurisdiction else None,
     }
     (archive_dir / "meta.json").write_text(json.dumps(meta, indent=2))
@@ -209,6 +225,8 @@ def generate_cover_letter(job_id: str) -> CoverLetterResult:
         pdf_path=str(pdf_path) if pdf_path else None,
         compile_status=compile_status,
         compile_message=compile_message,
+        grounding_ok=grounding_ok,
+        grounding_concerns=grounding_concerns,
         prompt_tokens=letter.prompt_tokens,
         completion_tokens=letter.completion_tokens,
     )

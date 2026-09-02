@@ -8,3 +8,4 @@ __pycache__/
 venv/
 job_intel_scraper.zip
 job_intel_scraper/applications/
+.claude/
