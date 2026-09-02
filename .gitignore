@@ -1,0 +1,9 @@
+job_intel_scraper/jobs.db
+job_intel_scraper/jobs.db-*
+.env
+*.pdf
+Pradeep_Moorthy_Resume_Fixed.docx
+__pycache__/
+*.pyc
+venv/
+job_intel_scraper.zip
