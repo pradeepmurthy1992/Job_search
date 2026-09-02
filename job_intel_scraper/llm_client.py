@@ -5,14 +5,19 @@ Two options are implemented, both because the candidate asked "what else can
 this run on if I can't get a paid Gemini key":
 
 1. GeminiClient — Google's Gemini API DOES have a genuinely free tier via
-   Google AI Studio (ai.google.dev): no credit card required, and as of
-   Sep 2026 gemini-2.5-flash / gemini-2.0-flash allow roughly 15 requests/
-   minute and 1,500 requests/day with a 1M token-per-minute ceiling — far
-   more than a 150-250-job-per-run cap will ever hit. The catch: Google's
-   terms allow using free-tier inputs for model training, which sits
-   awkwardly next to this platform's own "no third-party data sharing"
-   non-goal. Fine for a job-search side project; worth knowing before
-   sending a full resume through it repeatedly.
+   Google AI Studio (ai.google.dev): no credit card required, and the free
+   tier allows enough requests/minute and requests/day that a
+   150-250-job-per-run cap won't come close to hitting it. The catch:
+   Google's terms allow using free-tier inputs for model training, which
+   sits awkwardly next to this platform's own "no third-party data
+   sharing" non-goal. Fine for a job-search side project; worth knowing
+   before sending a full resume through it repeatedly.
+
+   Model name note: Google retires Gemini model versions over time (e.g.
+   gemini-2.5-flash returned "no longer available to new users" as of
+   Sep 2026, live-confirmed) — if GeminiClient starts 404ing, check
+   https://ai.google.dev/gemini-api/docs/models for the current default
+   and update DEFAULT below rather than assuming the API key is broken.
 
 2. OllamaClient — a fully local model via Ollama (https://ollama.com),
    completely free, no rate limits, no data ever leaving the machine at all.
@@ -222,7 +227,7 @@ class GeminiClient(LLMClient):
 
     API_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
-    def __init__(self, api_key: str, model: str = "gemini-2.5-flash"):
+    def __init__(self, api_key: str, model: str = "gemini-3.5-flash"):
         self.api_key = api_key
         self.model = model
 

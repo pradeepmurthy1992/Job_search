@@ -63,6 +63,12 @@ and Australia scoped beyond pure automotive per the 2026-09 expansion note.
   export GEMINI_API_KEY=your-key-here
   python -m job_intel_scraper.company_discovery --countries VN NL AU
   ```
+  **Live-confirmed caveat (Sep 2026):** the `google_search` grounding tool
+  hits a 429 quota error on a bare free-tier key — plain text generation
+  works fine, but grounding needs billing enabled on the Google Cloud
+  project behind the key to get usable quota. Until then, ask Claude Code
+  to run a research pass instead (free, uses its own search tools) — that's
+  how Allego/GreenFlux/Eneco eMobility/Zoomo were actually found.
 - `eligibility.py` — keyword-based sponsorship / citizenship-restriction /
   language-requirement detection, kept as a separate visible signal from the
   fit score on purpose.

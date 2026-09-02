@@ -15,7 +15,17 @@ Even a verified hit is a suggestion for a human to review and add to
 config.py, matching how every existing board token there carries a
 confidence note from actual verification, not a blind guess.
 
-Usage:
+IMPORTANT — grounding quota (live-confirmed Sep 2026): the plain
+generateContent call works fine on a bare free-tier API key, but the
+`google_search` grounding tool used here hits a 429 RESOURCE_EXHAUSTED
+immediately on a key with no billing enabled — grounding has its own,
+much smaller quota that isn't really usable on the free tier alone. This
+script will fail with a 429 unless billing is enabled on the Google Cloud
+project behind the key. Until then, ask Claude Code to run a research
+agent instead (WebSearch, not this script) — that's free and was how
+Allego/GreenFlux/Eneco eMobility/Zoomo were actually found.
+
+Usage (needs billing enabled on the project behind GEMINI_API_KEY):
     python -m job_intel_scraper.company_discovery --countries VN NL AU
 """
 
@@ -92,7 +102,7 @@ class VerifiedCandidate:
     note: str
 
 
-def _call_gemini_with_search(prompt: str, api_key: str, model: str = "gemini-2.5-flash") -> str:
+def _call_gemini_with_search(prompt: str, api_key: str, model: str = "gemini-3.5-flash") -> str:
     url = GEMINI_API_URL.format(model=model)
     resp = requests.post(
         url,
