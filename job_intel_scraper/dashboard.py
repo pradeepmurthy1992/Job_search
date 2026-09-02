@@ -115,6 +115,23 @@ def index():
     return redirect(url_for("jobs_view", country="ALL"))
 
 
+def _parse_float_filter(raw: str) -> float | None:
+    """Defensive float parsing for a query-string filter value. type="number"
+    inputs don't reliably block every non-numeric string across browsers
+    (a pasted "4,000" with a thousands separator gets through in practice),
+    and a URL can always be edited by hand regardless of what the form
+    enforces — either way, a bad filter value should be ignored, not crash
+    the whole page with an unhandled ValueError (this happened for real
+    during testing: min_match=abc and min_salary=4,000 both 500'd)."""
+    cleaned = raw.replace(",", "").strip()
+    if not cleaned:
+        return None
+    try:
+        return float(cleaned)
+    except ValueError:
+        return None
+
+
 @app.route("/jobs")
 def jobs_view():
     country = request.args.get("country", "ALL")
@@ -130,9 +147,9 @@ def jobs_view():
         posted_within_days=int(days_posted) if days_posted.isdigit() else None,
         location_contains=location or None,
         company_contains=company or None,
-        min_match_pct=float(min_match) if min_match else None,
+        min_match_pct=_parse_float_filter(min_match),
         eligibility_verdict=sponsorship or None,
-        min_salary_usd_month=float(min_salary) if min_salary else None,
+        min_salary_usd_month=_parse_float_filter(min_salary),
     )
 
     conn = db.get_connection()
