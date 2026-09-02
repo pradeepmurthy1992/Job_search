@@ -48,6 +48,21 @@ and Australia scoped beyond pure automotive per the 2026-09 expansion note.
   workflow for sources that can't be automated (see below): runs pasted
   postings through the identical scorer/eligibility/salary pipeline as a
   scraped job.
+- `company_discovery.py` — automates the periodic research pass that
+  manually found Allego/GreenFlux/Eneco eMobility/Zoomo: prompts Gemini
+  with search grounding (`tools: [{"google_search": {}}]`) for companies
+  in each country's target sectors that use one of the 4 connected ATS
+  platforms, then **independently verifies every candidate** by actually
+  calling the real endpoint via `connectors.py` — an LLM-guessed slug that
+  returns nothing is reported as unverified, never silently trusted.
+  Prints a report; never writes to `config.py` directly, since sector-fit
+  judgment on a new company still needs a human look, same as every
+  existing board token there. Needs `GEMINI_API_KEY` (Ollama has no
+  search-grounding tool):
+  ```bash
+  export GEMINI_API_KEY=your-key-here
+  python -m job_intel_scraper.company_discovery --countries VN NL AU
+  ```
 - `eligibility.py` — keyword-based sponsorship / citizenship-restriction /
   language-requirement detection, kept as a separate visible signal from the
   fit score on purpose.
