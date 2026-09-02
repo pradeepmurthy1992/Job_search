@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Job Intelligence Dashboard</title>
+<style>
+  :root { color-scheme: light; }
+  body { font-family: -apple-system, Segoe UI, Arial, sans-serif; margin: 0; padding: 0 24px 48px; background: #f6f7f9; color: #1a1d23; }
+  h1 { font-size: 20px; margin: 20px 0 4px; }
+  .subtitle { color: #666; font-size: 13px; margin-bottom: 16px; }
+  nav.tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  nav.tabs a { text-decoration: none; padding: 6px 14px; border-radius: 999px; background: #e9ebef; color: #333; font-size: 13px; font-weight: 600; }
+  nav.tabs a.active { background: #2b5fd9; color: #fff; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  th, td { padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 13px; text-align: left; vertical-align: top; }
+  th { background: #fafbfc; font-weight: 600; color: #444; position: sticky; top: 0; }
+  tr:hover { background: #fbfcfe; }
+  .job-title { font-weight: 600; color: #1a1d23; text-decoration: none; }
+  .job-title:hover { text-decoration: underline; }
+  .meta { color: #777; font-size: 12px; margin-top: 2px; }
+  .score { font-weight: 700; font-size: 15px; }
+  .score-bar { width: 60px; height: 6px; border-radius: 3px; background: #e5e7eb; margin-top: 4px; overflow: hidden; }
+  .score-bar-fill { height: 100%; background: #2b5fd9; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; }
+  .badge.likely_eligible { background: #e3f7e8; color: #1c7a34; }
+  .badge.flag_for_review { background: #fff4dc; color: #92660b; }
+  .badge.hard_exclude { background: #fde5e5; color: #b02525; }
+  .elig-note { font-size: 11px; color: #888; margin-top: 4px; max-width: 220px; }
+  .country-pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: #eef1f7; font-size: 11px; font-weight: 700; color: #445; }
+  select, textarea, button { font: inherit; }
+  select { padding: 4px 6px; border-radius: 5px; border: 1px solid #ccc; }
+  textarea { width: 100%; min-height: 44px; padding: 6px; border-radius: 5px; border: 1px solid #ccc; resize: vertical; font-size: 12px; }
+  form.status-form { display: flex; flex-direction: column; gap: 6px; min-width: 160px; }
+  .status-row { display: flex; gap: 6px; align-items: center; }
+  button.save { background: #2b5fd9; color: #fff; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; }
+  button.save:hover { background: #1e4bb8; }
+  .days-badge { font-size: 11px; color: #666; }
+  .empty { padding: 40px; text-align: center; color: #888; }
+  .reasoning { font-size: 11px; color: #555; max-width: 260px; margin-top: 4px; }
+</style>
+</head>
+<body>
+  <h1>Job Intelligence Dashboard</h1>
+  <div class="subtitle">{{ jobs|length }} job(s) shown &mdash; stage-1 keyword score and stage-2 LLM score shown side by side; eligibility is a separate signal, never blended into either score.</div>
+
+  <nav class="tabs">
+    {% for code in country_choices %}
+      <a href="{{ url_for('jobs_view', country=code) }}" class="{{ 'active' if code == country else '' }}">
+        {{ code if code == 'ALL' else jurisdictions[code].name }} ({{ counts.get(code, 0) }})
+      </a>
+    {% endfor %}
+  </nav>
+
+  {% if not jobs %}
+    <div class="empty">No jobs yet for this filter. Run <code>python -m job_intel_scraper.main --countries {{ country if country != 'ALL' else 'VN NL AU' }}</code> to populate the database.</div>
+  {% else %}
+  <table>
+    <thead>
+      <tr>
+        <th>Job</th>
+        <th>Country</th>
+        <th>Stage&nbsp;1<br>(keyword)</th>
+        <th>Stage&nbsp;2<br>(LLM)</th>
+        <th>Eligibility</th>
+        <th>Application status</th>
+        <th>Cover letter</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for job in jobs %}
+      <tr>
+        <td>
+          <a class="job-title" href="{{ job.url }}" target="_blank" rel="noopener">{{ job.title }}</a>
+          <div class="meta">{{ job.source }} &middot; {{ job.board_or_company }} &middot; {{ job.location_raw or 'location n/a' }}</div>
+        </td>
+        <td><span class="country-pill">{{ job.country_hint }}</span><div class="meta">{{ job.currency }}</div></td>
+        <td>
+          <div class="score">{{ job.stage1_score }}</div>
+          <div class="score-bar"><div class="score-bar-fill" style="width: {{ (job.stage1_score or 0)|round|int }}%;"></div></div>
+        </td>
+        <td>
+          {% if job.llm_scored %}
+            <div class="score">{{ job.llm_score|round(0)|int }}</div>
+            {% if job.llm_reasoning %}<div class="reasoning">{{ job.llm_reasoning }}</div>{% endif %}
+          {% else %}
+            <span class="meta">not scored</span>
+          {% endif %}
+        </td>
+        <td>
+          <span class="badge {{ job.eligibility_verdict }}">{{ job.eligibility_verdict.replace('_', ' ') }}</span>
+          <div class="elig-note">{{ job.eligibility_note }}</div>
+        </td>
+        <td>
+          <form class="status-form" method="post" action="{{ url_for('update_status', job_id=job.id) }}">
+            <input type="hidden" name="redirect_country" value="{{ country }}">
+            <div class="status-row">
+              <select name="application_status">
+                {% for s in statuses %}
+                  <option value="{{ s }}" {{ 'selected' if job.application_status == s else '' }}>{{ s.replace('_',' ') }}</option>
+                {% endfor %}
+              </select>
+              {% if job.days_since_applied is not none %}
+                <span class="days-badge">{{ job.days_since_applied }}d since applied</span>
+              {% endif %}
+            </div>
+            <textarea name="application_notes" placeholder="notes...">{{ job.application_notes or '' }}</textarea>
+            <button class="save" type="submit">Save</button>
+          </form>
+        </td>
+        <td>
+          <button class="save gen-letter" type="button" data-job-id="{{ job.id }}">Generate</button>
+          <div class="letter-status meta" data-job-id="{{ job.id }}"></div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+<script>
+async function pollStatus(jobId, statusEl, btnEl) {
+  try {
+    const resp = await fetch(`/jobs/${encodeURIComponent(jobId)}/cover-letter/status`);
+    const data = await resp.json();
+    if (data.state === 'running') {
+      statusEl.textContent = data.message || 'Generating...';
+      setTimeout(() => pollStatus(jobId, statusEl, btnEl), 2000);
+    } else if (data.state === 'done') {
+      statusEl.textContent = `${data.compile_status}: ${data.message}`;
+      btnEl.disabled = false;
+      btnEl.textContent = 'Regenerate';
+    } else if (data.state === 'error') {
+      statusEl.textContent = `Error: ${data.message}`;
+      btnEl.disabled = false;
+      btnEl.textContent = 'Retry';
+    }
+  } catch (err) {
+    statusEl.textContent = `Error checking status: ${err}`;
+    btnEl.disabled = false;
+  }
+}
+
+document.querySelectorAll('.gen-letter').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const jobId = btn.getAttribute('data-job-id');
+    const statusEl = document.querySelector(`.letter-status[data-job-id="${CSS.escape(jobId)}"]`);
+    btn.disabled = true;
+    statusEl.textContent = 'Starting...';
+    try {
+      const resp = await fetch(`/jobs/${encodeURIComponent(jobId)}/cover-letter`, { method: 'POST' });
+      const data = await resp.json();
+      if (resp.status === 409) {
+        statusEl.textContent = 'Already generating...';
+      }
+      pollStatus(jobId, statusEl, btn);
+    } catch (err) {
+      statusEl.textContent = `Error: ${err}`;
+      btn.disabled = false;
+    }
+  });
+});
+</script>
+</body>
+</html>

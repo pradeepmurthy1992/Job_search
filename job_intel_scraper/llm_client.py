@@ -49,6 +49,31 @@ JOB DESCRIPTION:
 {job_description}
 """
 
+# Cover-letter drafting is grounded strictly in the actual resume text (the
+# full extracted .docx content, already passed through the resume
+# data-contract check by the caller — never the short scoring summary),
+# per the platform overview's "on-demand application materials" section.
+# The model is explicitly told not to invent facts not present in the resume.
+COVER_LETTER_PROMPT_TEMPLATE = """Write the BODY PARAGRAPHS ONLY (3-4 short paragraphs, no more than \
+320 words total) of a professional cover letter for the candidate below, for the specific job posting \
+given. Ground every claim strictly in the resume content provided — do not invent employers, numbers, \
+dates, or skills that are not present in the resume text. Do not use placeholder brackets like \
+[Company Name] — use the actual company name given. Do NOT include a salutation/greeting line (e.g. \
+"Dear Hiring Manager,") and do NOT include a closing sign-off (e.g. "Sincerely,") — both are added \
+separately by the letter template. Respond with ONLY the body paragraph text, no markdown, no \
+commentary, no headers.
+
+CANDIDATE RESUME (full text):
+{resume_text}
+
+TARGET COMPANY: {company}
+
+JOB TITLE: {job_title}
+
+JOB DESCRIPTION:
+{job_description}
+"""
+
 
 @dataclass
 class LLMResult:
@@ -58,9 +83,22 @@ class LLMResult:
     completion_tokens: int
 
 
+@dataclass
+class LetterResult:
+    letter_body: str
+    prompt_tokens: int
+    completion_tokens: int
+
+
 class LLMClient(ABC):
     @abstractmethod
     def score_fit(self, resume_text: str, job_title: str, job_description: str) -> LLMResult:
+        ...
+
+    @abstractmethod
+    def draft_cover_letter(
+        self, resume_text: str, job_title: str, company: str, job_description: str
+    ) -> LetterResult:
         ...
 
 
@@ -113,6 +151,32 @@ class GeminiClient(LLMClient):
             completion_tokens=usage.get("candidatesTokenCount", 0),
         )
 
+    def draft_cover_letter(
+        self, resume_text: str, job_title: str, company: str, job_description: str
+    ) -> LetterResult:
+        prompt = COVER_LETTER_PROMPT_TEMPLATE.format(
+            resume_text=resume_text, job_title=job_title, company=company,
+            job_description=job_description,
+        )
+        url = self.API_URL.format(model=self.model)
+        resp = requests.post(
+            url,
+            params={"key": self.api_key},
+            json={"contents": [{"parts": [{"text": prompt}]}]},
+            timeout=60,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+        text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        usage = data.get("usageMetadata", {})
+
+        return LetterResult(
+            letter_body=text,
+            prompt_tokens=usage.get("promptTokenCount", 0),
+            completion_tokens=usage.get("candidatesTokenCount", 0),
+        )
+
 
 class OllamaClient(LLMClient):
     """Fully local, fully free — talks to a locally-running Ollama daemon.
@@ -144,6 +208,27 @@ class OllamaClient(LLMClient):
             # kept at 0 cost-tracking-wise since local inference has no
             # dollar cost regardless — the platform's token ceiling is a
             # cloud-spend guard, not meaningful for a local model.
+            prompt_tokens=data.get("prompt_eval_count", 0),
+            completion_tokens=data.get("eval_count", 0),
+        )
+
+    def draft_cover_letter(
+        self, resume_text: str, job_title: str, company: str, job_description: str
+    ) -> LetterResult:
+        prompt = COVER_LETTER_PROMPT_TEMPLATE.format(
+            resume_text=resume_text, job_title=job_title, company=company,
+            job_description=job_description,
+        )
+        resp = requests.post(
+            f"{self.host}/api/generate",
+            json={"model": self.model, "prompt": prompt, "stream": False},
+            timeout=180,  # letter drafting is a longer generation than a fit score
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+        return LetterResult(
+            letter_body=data.get("response", "").strip(),
             prompt_tokens=data.get("prompt_eval_count", 0),
             completion_tokens=data.get("eval_count", 0),
         )

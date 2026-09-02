@@ -31,7 +31,41 @@ and Australia scoped beyond pure automotive per the 2026-09 expansion note.
   below before picking one.
 - `main.py` — CLI orchestrator: discovery → stage-1 → eligibility for every
   configured country, with `--stage2` to also run LLM scoring, enforcing the
-  per-country token ceiling and never re-scoring a cached job.
+  per-country token ceiling and never re-scoring a cached job. Runs the
+  personal-data git-tracking guard (`git_guard.py`) as a hard-stop pre-flight
+  check before every run.
+- `git_guard.py` — the "never let a `.gitignore` rule alone undo a prior
+  commit" guard from the platform overview. Checks both halves: that every
+  protected pattern (jobs.db, .env, the resume, the cover-letter archive) is
+  actually in `.gitignore`, and that none of them are already tracked by
+  git. Run standalone with `python -m job_intel_scraper.git_guard` before
+  every commit.
+- `resume_contract.py` — the resume data-contract check: extracts text from
+  `Pradeep_Moorthy_Resume_Fixed.docx` (via `python-docx`) and fails loudly
+  (`ResumeContractError`) if it finds leftover placeholder markers (`[[`,
+  `[TBD]`, `[program/platform name]`-shaped brackets, etc.) before any
+  cover-letter generation is allowed to proceed.
+- `dashboard.py` + `templates/dashboard.html` — the local Flask dashboard:
+  both scoring layers side by side, the eligibility signal as its own
+  visible column (never blended into a score), a VN/NL/AU country filter,
+  application-status tracking (applied/interview/offer/rejected, notes,
+  days-since-applied), and an on-demand "Generate Cover Letter" button per
+  job with live status polling.
+- `cover_letter.py` — on-demand LaTeX cover-letter generation, triggered
+  only for one specific job at a time (never automatically for every
+  match). Runs the git-tracking guard and the resume data-contract check
+  first, drafts the letter body via the configured LLM backend
+  (`llm_client.draft_cover_letter`), renders it into
+  `latex/cover_letter_template.tex`, and attempts to compile with `xelatex`
+  — if `xelatex` isn't installed or fails, the `.tex` source and the rest of
+  the archive are still written, and the failure is reported rather than
+  silently swallowed. Each generation is archived under
+  `job_intel_scraper/applications/<job_id>/<timestamp>/`: the `.tex` (and
+  `.pdf` if compiled), the resume version actually used, a JSON snapshot of
+  the job posting, and generation metadata (LLM backend, token counts,
+  compile status) — so the record survives even if the original listing is
+  later taken down. This archive directory is gitignored and covered by
+  `git_guard.py`, same sensitivity class as the resume itself.
 
 **Stubbed, on purpose:**
 - Local job-board connectors (Seek, Indeed.nl, VietnamWorks, TopCV, etc.) —
@@ -42,10 +76,15 @@ and Australia scoped beyond pure automotive per the 2026-09 expansion note.
   employers there (mining/rail/infrastructure corporates) run Workday or
   SuccessFactors, which neither this skeleton nor a lightweight JSON API
   covers — Seek/Indeed scraping is the realistic near-term path.
-- The Flask dashboard, LaTeX cover-letter pipeline, AES-256-GCM mobile
-  export, and git-tracked-secrets guard from the platform overview aren't
-  part of this skeleton — this covers discovery + two-stage scoring +
-  eligibility only.
+- The AES-256-GCM mobile export from the platform overview isn't part of
+  this codebase yet.
+
+**Also real / runnable now:** the Flask dashboard (`dashboard.py`), the
+resume data-contract check (`resume_contract.py`), the on-demand LaTeX
+cover-letter pipeline (`cover_letter.py`), and the personal-data
+git-tracking guard (`git_guard.py`) — see their entries above. Cover-letter
+PDF compilation needs `xelatex` on PATH (MiKTeX or TeX Live); without it,
+the `.tex` source is still generated and archived, just not compiled.
 
 ## Which LLM backend should you use?
 
@@ -129,6 +168,18 @@ python -m job_intel_scraper.main --countries NL --stage2
 
 Results land in `jobs.db` (SQLite) — columns include stage-1 score breakdown,
 eligibility verdict/note, and llm_score/llm_reasoning once stage 2 has run.
+
+### Dashboard
+
+```bash
+python -m job_intel_scraper.dashboard
+```
+
+Opens a local server at http://127.0.0.1:5000 (binds to localhost only).
+Filter by country, update application status/notes inline, and click
+"Generate" on any job to kick off on-demand cover-letter generation — the
+button polls for status and shows the result (compiled/failed/xelatex not
+found) without a page reload.
 
 ## Before you rely on this for real applications
 

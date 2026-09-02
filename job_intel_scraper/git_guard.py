@@ -29,6 +29,11 @@ PROTECTED_PATTERNS = [
     ".env",
     "*.pdf",
     "Pradeep_Moorthy_Resume_Fixed.docx",
+    # Cover-letter archive: contains a copy of the resume, generated letter
+    # text, and job-posting snapshots for every application — same
+    # personal-data sensitivity class as the resume itself, so it gets the
+    # same hard exclusion rather than a narrower per-file-type rule.
+    "job_intel_scraper/applications/",
 ]
 
 
