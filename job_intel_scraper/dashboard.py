@@ -19,7 +19,7 @@ import time
 
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 
-from . import db, cover_letter, resume_contract, manual_job
+from . import db, cover_letter, resume_contract, manual_job, company_sector
 from .config import JURISDICTIONS
 
 app = Flask(__name__)
@@ -90,6 +90,10 @@ def _shape_job_row(row) -> dict:
     posted_at = d.get("posted_at")
     d["days_since_posted"] = int((time.time() - posted_at) // 86400) if posted_at else None
 
+    d["is_automotive"] = company_sector.is_automotive(
+        d.get("board_or_company", ""), d.get("company_name", "") or "", d.get("title", "") or "",
+    )
+
     return d
 
 
@@ -141,6 +145,7 @@ def jobs_view():
     min_match = request.args.get("min_match", "").strip()
     sponsorship = request.args.get("sponsorship", "").strip()
     min_salary = request.args.get("min_salary", "").strip()
+    automotive_only = request.args.get("automotive_only", "").strip() == "1"
 
     filter_kwargs = dict(
         country=None if country == "ALL" else country,
@@ -159,11 +164,21 @@ def jobs_view():
         conn.close()
 
     jobs = [_shape_job_row(r) for r in rows]
+    # Applied in Python, not SQL: company-sector classification is a
+    # curated lookup + keyword fallback (company_sector.py), not something
+    # cleanly expressible as a WHERE clause.
+    if automotive_only:
+        jobs = [j for j in jobs if j["is_automotive"]]
     kpis = _compute_kpis(jobs)
 
     conn = db.get_connection()
     try:
-        counts = {code: len(db.list_jobs(conn, country=code)) for code in JURISDICTIONS}
+        counts = {}
+        for code in JURISDICTIONS:
+            country_rows = [_shape_job_row(r) for r in db.list_jobs(conn, country=code)]
+            if automotive_only:
+                country_rows = [r for r in country_rows if r["is_automotive"]]
+            counts[code] = len(country_rows)
         counts["ALL"] = sum(counts.values())
     finally:
         conn.close()
@@ -181,6 +196,7 @@ def jobs_view():
         filters={
             "days_posted": days_posted, "location": location, "company": company,
             "min_match": min_match, "sponsorship": sponsorship, "min_salary": min_salary,
+            "automotive_only": automotive_only,
         },
     )
 
