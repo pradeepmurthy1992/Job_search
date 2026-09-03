@@ -57,11 +57,40 @@ CREATE TABLE IF NOT EXISTS run_ledger (
 """
 
 
+# Columns added to `jobs` after the table already existed on some machines
+# (posted_at/company_name/salary_* were added mid-project). CREATE TABLE IF
+# NOT EXISTS is a no-op once the table exists — it does NOT retroactively
+# add new columns — so a jobs.db created before these were added would
+# otherwise 500 the moment a filter referenced one of them by name
+# (reproduced live: "no such column: company_name" on the dashboard's
+# company filter). _migrate() below adds any column that's in SCHEMA but
+# missing from the actual table, every time a connection is opened — the
+# same "don't let a silent mismatch linger" instinct as the git-tracking
+# guard, applied to the database instead of git.
+_COLUMNS_ADDED_AFTER_INITIAL_SCHEMA: list[tuple[str, str]] = [
+    ("posted_at", "REAL"),
+    ("company_name", "TEXT"),
+    ("salary_usd_month_min", "REAL"),
+    ("salary_usd_month_max", "REAL"),
+    ("salary_note", "TEXT"),
+    ("origin", "TEXT DEFAULT 'scraped'"),
+]
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    existing = {row[1] for row in conn.execute("PRAGMA table_info(jobs)").fetchall()}
+    for column, ddl_type in _COLUMNS_ADDED_AFTER_INITIAL_SCHEMA:
+        if column not in existing:
+            conn.execute(f"ALTER TABLE jobs ADD COLUMN {column} {ddl_type}")
+    conn.commit()
+
+
 def get_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH, timeout=30)
     conn.execute("PRAGMA journal_mode=WAL;")
     conn.execute("PRAGMA busy_timeout=30000;")
     conn.executescript(SCHEMA)
+    _migrate(conn)
     return conn
 
 
