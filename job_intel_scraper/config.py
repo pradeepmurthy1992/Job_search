@@ -91,12 +91,36 @@ JURISDICTIONS: dict[str, JurisdictionProfile] = {
             "fluent vietnamese", "native vietnamese", "vietnamese language required",
         ],
         sponsorship_required=True,
-        greenhouse_boards=[], lever_boards=[], workable_boards=[], recruitee_boards=[],
-        # No automotive/EV employer in Vietnam was confirmed on Greenhouse,
-        # Lever, Workable, or Recruitee during research (Sep 2026) — Selex
-        # Motors (EV two-wheeler maker, the most plausible scale-up match)
-        # recruits via Facebook/ITviec/LinkedIn, not a scrapable public ATS
-        # API. Treat local boards as primary here, not a fallback.
+        # No purely automotive/EV employer in Vietnam was confirmed on these
+        # 4 platforms (VinFast->Zoho Recruit, Bosch->SmartRecruiters, Thaco/
+        # Toyota/Honda/Ford VN -> Facebook/local boards, Selex Motors and
+        # Dat Bike -> no formal ATS at all). But broadening beyond pure
+        # automotive branding to the same manufacturing/NPI/VAVE discipline
+        # at Western multinationals with Vietnam factories turned up real,
+        # live-verified hits (Sep 2026):
+        greenhouse_boards=["axon"],
+        # Axon (public-safety hardware, HCMC site) — Greenhouse, board
+        # token "axon". Not automotive-branded, but genuinely the same
+        # NPI/manufacturing Program Management discipline. Verified live:
+        # 22 of 511 postings are Ho Chi Minh City-based as of Sep 2026,
+        # including "Employee Experience Program Manager II" and
+        # "Engineering Manager, Connected Devices".
+        lever_boards=["uei"],
+        # Universal Electronics Inc. (consumer-electronics manufacturer,
+        # Hai Duong City factory) — Lever, slug "uei". Verified live: 7 of
+        # 17 postings are Hai Duong-based, including "NPI Electronics
+        # Engineer" — direct NPI/manufacturing-engineering overlap.
+        # (Ajax Systems, slug "ajax", also has a real Hanoi factory and is
+        # genuinely on Lever, but had zero Vietnam-tagged postings when
+        # checked — not added to avoid an always-empty board; worth
+        # re-checking periodically since the factory is real and growing.)
+        workable_boards=[],
+        recruitee_boards=["onemobility"],
+        # One Mobility Group (automotive sensor/connectivity/electrification
+        # solutions, operates in 13 countries incl. Vietnam) — Recruitee,
+        # slug "onemobility". Direct domain fit, not just adjacent. Verified
+        # live: 1 of 25 postings is Vietnam-based ("Global Operational
+        # Excellence Expert," Hai Phong) — low volume but a genuine hit.
         local_job_boards=["vietnamworks.com", "topcv.vn", "careerbuilder.vn", "linkedin.com"],
         max_jobs_per_run=150,
         max_llm_tokens_per_run=150_000,
@@ -127,7 +151,13 @@ JURISDICTIONS: dict[str, JurisdictionProfile] = {
             "fluent dutch", "native dutch", "dutch language required", "dutch (c1",
         ],
         sponsorship_required=True,
-        greenhouse_boards=[], lever_boards=[],
+        # ChargePoint (global EV charging, Amsterdam office) confirmed on
+        # Greenhouse, board token "chargepoint" — live-verified Sep 2026:
+        # 1 of 31 postings is Amsterdam-tagged ("Supply Chain Coordinator").
+        # Low current volume but a large, direct-sector employer worth
+        # tracking.
+        greenhouse_boards=["chargepoint"],
+        lever_boards=[],
         workable_boards=[],
         # Fastned confirmed via web research (Sep 2026): runs its own careers
         # site on Recruitee at fastned.recruitee.com. High confidence — the
@@ -144,8 +174,29 @@ JURISDICTIONS: dict[str, JurisdictionProfile] = {
         # only stance. Note: Allego is white-labeled at join.allego.eu
         # (not <slug>.recruitee.com) — confirm this connector handles a
         # custom domain, not just the default subdomain pattern.
-        recruitee_boards=["fastned", "greenflux", "enecoemobility"],
-        recruitee_custom_domains={"allego": "join.allego.eu"},
+        # Extended-domain pass (Sep 2026) — Brainport Eindhoven high-tech/
+        # precision-manufacturing cluster turned out to be the single
+        # strongest new vein: NTS Group (Recruitee, "nts") does the same
+        # QLTC (Quality/Logistics/Technology/Cost) discipline as automotive
+        # VAVE/NPI, just for semiconductor/life-sciences/defense OEMs — 50
+        # of 65 live postings are NL-based, including multiple Project/
+        # Program Manager and Category/Supplier Manager roles. Rocsys
+        # (Recruitee, "rocsys" — robotic EV/truck charging automation,
+        # Rijswijk) and LeydenJar Technologies (Recruitee, "leydenjar" —
+        # silicon-anode battery manufacturing scale-up, Eindhoven/Leiden,
+        # has a live "Senior Program Manager" role) both confirmed with
+        # real NL postings. Milence (Recruitee, custom domain
+        # jobs.milence.com — heavy-duty truck charging network, a JV of
+        # Daimler Truck/Traton/Volvo Group) confirmed too, though currently
+        # only 1 open role. Two "obvious" next EV-charging names — Shell
+        # Recharge Solutions/NewMotion and Eneco's parent (non-eMobility)
+        # brand — both recently abandoned Recruitee (their subdomains now
+        # redirect to Recruitee's "not hosted" page); don't re-add them
+        # without re-verifying first. Battolyser Systems (battery/
+        # electrolyser cleantech) is genuinely Recruitee-hosted but 404s
+        # right now — worth re-checking periodically, not added yet.
+        recruitee_boards=["fastned", "greenflux", "enecoemobility", "nts", "rocsys", "leydenjar"],
+        recruitee_custom_domains={"allego": "join.allego.eu", "milence": "jobs.milence.com"},
         local_job_boards=["indeed.nl", "nationalevacaturebank.nl", "linkedin.com"],
         max_jobs_per_run=150,
         max_llm_tokens_per_run=150_000,

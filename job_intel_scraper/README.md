@@ -211,14 +211,68 @@ which is itself useful information:
   country-filtered — currently only has UK-based roles open, which
   `fetch_all()`'s location filter correctly excludes from the AU results
   rather than mislabeling them.
-- **Vietnam** — still zero automotive/EV/manufacturing employers confirmed
-  on Greenhouse, Lever, Workable, or Recruitee, re-verified Sep 2026.
-  VinFast is on Zoho Recruit, Bosch (Vietnam and likely globally) on
-  SmartRecruiters, Thaco/Toyota/Honda/Ford Vietnam recruit via
-  Facebook/local boards with no dedicated ATS, Selex Motors and Dat Bike
-  the same. VietnamWorks was evaluated as a scraping target (see "Evaluated
-  and deliberately NOT automated" above) and isn't automatable without a
-  headless-browser dependency — use the manual-paste form for Vietnam.
+- **NTS Group (Netherlands)** — high-tech precision manufacturing/
+  mechatronics (Brainport Eindhoven cluster), building systems supplier
+  for semiconductor/life-sciences/defense OEMs. Confirmed on **Recruitee**
+  at `nts.recruitee.com`. High confidence, live-verified: 50 of 65
+  postings are NL-based, including multiple Project/Program Manager and
+  Category/Supplier Manager roles. Not automotive-branded, but the same
+  QLTC (Quality/Logistics/Technology/Cost) discipline as VAVE/NPI —
+  currently the single strongest NL vein by volume.
+- **Rocsys (Netherlands)** — robotic EV/truck charging automation
+  (Rijswijk). Confirmed on **Recruitee** at `rocsys.recruitee.com`. High
+  confidence: 4 of 5 postings NL-based.
+- **LeydenJar Technologies (Netherlands)** — silicon-anode battery
+  manufacturing scale-up (Eindhoven/Leiden). Confirmed on **Recruitee** at
+  `leydenjar.recruitee.com`. High confidence: 6 of 6 postings NL-based,
+  including a live "Senior Program Manager" role.
+- **Milence (Netherlands)** — heavy-duty truck charging network (JV of
+  Daimler Truck/Traton/Volvo Group). Confirmed on **Recruitee**,
+  white-labeled at `jobs.milence.com`. High confidence, but currently only
+  1 open role.
+- **ChargePoint (Netherlands)** — global EV charging infrastructure,
+  Amsterdam office. Confirmed on **Greenhouse** at
+  `boards.greenhouse.io/chargepoint`. High confidence, but currently only
+  1 of 31 postings is Amsterdam-based — low volume for a large employer,
+  worth re-checking periodically.
+- Two "obvious" next EV-charging names for NL were checked and **ruled
+  out**: Shell Recharge Solutions/NewMotion and Eneco's parent
+  (non-eMobility) brand both recently abandoned Recruitee — their
+  subdomains now redirect to Recruitee's "not hosted" page. Don't re-add
+  without re-verifying first. Battolyser Systems (battery/electrolyser
+  cleantech) is genuinely Recruitee-hosted but currently 404s — worth a
+  periodic re-check, not added yet.
+- **Axon (Vietnam)** — public-safety hardware (body cameras, TASERs), Ho
+  Chi Minh City site. Not automotive-branded, but genuinely the same
+  NPI/manufacturing Program Management discipline. Confirmed on
+  **Greenhouse** at `boards.greenhouse.io/axon`. High confidence,
+  live-verified: dozens of HCMC-based postings including "Employee
+  Experience Program Manager II" and "Engineering Manager, Connected
+  Devices." The single best functional match found for Vietnam despite
+  the domain mismatch — same reasoning as the AU sector expansion.
+- **Universal Electronics Inc. / UEI (Vietnam)** — consumer-electronics
+  contract manufacturer, Hai Duong City factory. Confirmed on **Lever** at
+  `jobs.lever.co/uei`. High confidence, live-verified: 7 of 17 postings
+  are Hai Duong-based, including "NPI Electronics Engineer" — direct
+  NPI/manufacturing-engineering overlap.
+- **One Mobility Group (Vietnam)** — automotive sensor/connectivity/
+  electrification solutions, operates in 13 countries incl. Vietnam.
+  Confirmed on **Recruitee** at `onemobility.recruitee.com`. Direct
+  domain fit, though currently only 1 of 25 postings is Vietnam-based.
+- **Ajax Systems (Vietnam)** — IoT security/alarm systems with a real,
+  large new Hanoi manufacturing plant. Genuinely confirmed on **Lever**
+  (`jobs.lever.co/ajax`), but had **zero** Vietnam-tagged postings when
+  checked — not added to config to avoid an always-empty board; worth
+  re-checking periodically since the factory is real and growing.
+- VietnamWorks was separately evaluated as a scraping target (see
+  "Evaluated and deliberately NOT automated" above) and isn't automatable
+  without a headless-browser dependency — use the manual-paste form for
+  anything not covered by the companies above.
+- Aurecon, WSP Australia, GHD, AECOM, and Jacobs (the major AU
+  infrastructure/engineering consultancies) were checked and definitively
+  ruled out: Workday, Oracle Recruiting Cloud, Oracle Recruiting Cloud,
+  SmartRecruiters, and unconfirmed-but-not-one-of-the-4 respectively —
+  none scrapable by this system.
 - **Tritium and SEA Electric (Australia)** — both real EV-adjacent
   companies, but found on Employment Hero / bespoke career sites, not any
   of the four ATS platforms this skeleton connects to.

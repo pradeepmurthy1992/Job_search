@@ -68,6 +68,72 @@ _COUNTRY_KEYWORDS: dict[str, list[str]] = {
            "da nang", "hai phong", "can tho"],
 }
 _REMOTE_KEYWORDS = ["remote", "anywhere", "distributed", "work from home"]
+# A "remote" location string is often tied to a SPECIFIC other country or
+# US state ("Texas-Remote, United States", "France-Remote") — observed live
+# on Axon's Greenhouse board, where several US/France-remote roles were
+# wrongly passed through to Vietnam because the bare word "remote" alone
+# was treated as ambiguous-but-plausible. If a remote listing explicitly
+# names one of these, it's remote *for that place*, not global, so it
+# should NOT pass through for a different jurisdiction.
+# A one-off blocklist kept missing entries in practice (UAE slipped through
+# on the first pass) — this is a broad common-name country list instead,
+# built to be over-inclusive rather than patched gap-by-gap each time a new
+# miss turns up. Deliberately excludes VN/NL/AU (and their common
+# alternate names), since those are handled by _COUNTRY_KEYWORDS matching
+# TRUE, not this list.
+_OTHER_COUNTRY_SIGNALS = [
+    "united states", "usa", "u.s.a", "u.s.", "america",
+    "canada", "mexico",
+    "brazil", "argentina", "colombia", "chile", "peru", "ecuador",
+    "uruguay", "paraguay", "bolivia", "venezuela", "costa rica", "panama",
+    "united kingdom", "england", "scotland", "wales",
+    "ireland", "france", "germany", "spain", "italy", "portugal",
+    "poland", "ukraine", "romania", "bulgaria", "hungary", "czech",
+    "slovakia", "slovenia", "croatia", "serbia", "greece", "austria",
+    "switzerland", "belgium", "luxembourg", "denmark", "sweden", "norway",
+    "finland", "iceland", "estonia", "latvia", "lithuania", "malta",
+    "cyprus", "moldova", "belarus", "albania", "bosnia", "montenegro",
+    "north macedonia", "kosovo", "monaco", "andorra", "liechtenstein",
+    "turkey", "russia", "armenia", "azerbaijan",  # "georgia" already covered via the US state entry below
+    "israel", "lebanon", "jordan", "iraq", "iran", "syria",
+    "saudi arabia", "united arab emirates", "qatar", "kuwait", "bahrain",
+    "oman", "yemen", "egypt",
+    "india", "pakistan", "bangladesh", "sri lanka", "nepal", "bhutan",
+    "china", "japan", "korea", "taiwan", "hong kong", "mongolia",
+    "philippines", "singapore", "malaysia", "indonesia", "thailand",
+    "myanmar", "cambodia", "laos", "brunei",
+    "new zealand", "fiji", "papua new guinea",
+    "south africa", "nigeria", "kenya", "ghana", "morocco", "tunisia",
+    "algeria", "ethiopia", "tanzania", "uganda", "zimbabwe", "zambia",
+    "senegal", "ivory coast", "cameroon", "rwanda",
+    "kazakhstan", "uzbekistan", "kyrgyzstan", "tajikistan", "turkmenistan",
+    # US state names, since "<State>-Remote" is a common Greenhouse pattern
+    "alabama", "alaska", "arizona", "arkansas", "california", "colorado",
+    "connecticut", "delaware", "florida", "georgia", "hawaii", "idaho",
+    "illinois", "indiana", "iowa", "kansas", "kentucky", "louisiana",
+    "maine", "maryland", "massachusetts", "michigan", "minnesota",
+    "mississippi", "missouri", "montana", "nebraska", "nevada",
+    "new hampshire", "new jersey", "new mexico", "new york",
+    "north carolina", "north dakota", "ohio", "oklahoma", "oregon",
+    "pennsylvania", "rhode island", "south carolina", "south dakota",
+    "tennessee", "texas", "utah", "vermont", "virginia", "washington",
+    "west virginia", "wisconsin", "wyoming",
+]
+
+# Greenhouse location strings often lead with a 2-letter ISO-ish country/
+# state code instead of a full name ("US-CA-Remote", "US-GA-Remote",
+# "CA - Remote") — plain substring matching against _OTHER_COUNTRY_SIGNALS
+# missed these live (observed: 6 US/Canada-remote roles leaked into a
+# Netherlands run before this was added), and a blind substring check for
+# a bare 2-letter code like "us" would false-positive on ordinary words
+# ("campus", "customer") — so this is a separate, anchored regex applied
+# only to the leading token of the location string.
+_LEADING_CODE_PATTERN = re.compile(r"^\s*([A-Za-z]{2})\b[\s-]")
+_KNOWN_COUNTRY_CODES = {
+    "us", "ca", "uk", "gb", "de", "fr", "es", "it", "nl", "au", "vn", "ie",
+    "nz", "in", "cn", "jp", "sg", "ae", "mx", "br", "ph", "pl", "se", "ch",
+    "be", "dk", "no", "fi", "at", "pt", "za",
+}
 
 
 @dataclass
@@ -101,9 +167,25 @@ def _location_matches(job: Job, country_code: str) -> bool:
         return job._source_country_code.upper() == country_code.upper()
 
     text = (job.location_raw or "").lower()
+
+    leading_code_match = _LEADING_CODE_PATTERN.match(text)
+    if leading_code_match:
+        code = leading_code_match.group(1).lower()
+        if code == country_code.lower():
+            return True
+        if code in _KNOWN_COUNTRY_CODES:
+            return False
+        # An unrecognized 2-letter prefix isn't trusted either way — fall
+        # through to the other checks rather than guess.
+
     if any(kw in text for kw in _COUNTRY_KEYWORDS.get(country_code, [])):
         return True
     if any(kw in text for kw in _REMOTE_KEYWORDS):
+        # "Remote" tied to a specific other place ("Texas-Remote, United
+        # States", "France-Remote") is remote *for that place*, not
+        # global — don't pass it through for a different jurisdiction.
+        if any(sig in text for sig in _OTHER_COUNTRY_SIGNALS):
+            return False
         return True
     # No location text at all — don't discard on absence of a signal.
     if not text.strip():
