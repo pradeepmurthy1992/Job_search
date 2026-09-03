@@ -56,6 +56,44 @@ against real data before being fixed:
    shared application-status/notes/LLM-score record (not duplicated per
    country). Existing rows backfilled from `country_hint` automatically on
    migration.
+4. **`get_unscored_candidates` had no priority ordering and still filtered
+   on `country_hint` instead of `matched_countries`.** Fixed alongside #3
+   — stage-2 candidates are now processed best-stage1-score-first (so a
+   token ceiling that stops the loop partway through has already spent
+   its budget on the strongest matches) and considered under every
+   country a job matches, not just its first-seen one.
+5. **The stage-2 gate itself only looked at the 'domain' keyword category,
+   not the blended score.** This was the most consequential bug: it
+   required ~5+ literal automotive-jargon hits (OEM/Tier-1/BOM/PLM/ECN)
+   just to reach stage-2, which systematically excluded exactly the
+   adjacent-sector companies the whole multi-country domain-expansion
+   strategy was built to find. Live-verified: only 9 of 586 real jobs
+   (1.5%) cleared it, and AirTrunk's "Senior Project Manager" — a
+   near-perfect title match (28.1/30) and the #5 stage-1 result overall —
+   scored domain=6.0 (need 13.5) since a data-centre developer's JD
+   doesn't use automotive vocabulary at all, and never got an LLM look.
+   `scorer.clears_llm_threshold_from_total_score()` now gates on the
+   blended stage1_score total instead, letting a strong title/
+   methodology/seniority match compensate for sparse domain jargon — the
+   default threshold (45.0) was picked to land near the real top-10%
+   cutoff (44.1) observed across the dataset, not an arbitrary number.
+6. **`resume_summary.txt` (fed to every stage-2 prompt) still said "Vietnam,
+   the Netherlands, or Australia" only** — never updated when US/UK/
+   Germany/UAE were added. This was actively corrupting the first stage-2
+   run under the new gate: the LLM correctly-but-wrongly flagged 6 of 9
+   scored jobs for "geographic mismatch" against countries the candidate
+   now explicitly wants included. Fixed and every affected score was
+   reset and re-run with the corrected profile (scores moved up
+   meaningfully once the stale penalty was gone — e.g. one Waymo role
+   went from 55/100 to 88/100 on the exact same job).
+7. **No retry/backoff on Gemini rate-limit responses.** Fixing #5 (many
+   more real candidates now qualify for stage-2 per run) immediately
+   saturated Gemini's free-tier ~15 req/min limit live — most calls in
+   that run failed outright with 429 and were simply skipped rather than
+   paced, wasting the run instead of just taking longer. Added
+   `_post_gemini_with_retry()` (exponential backoff, honors `Retry-After`
+   when the API sends one) and wired it into all three `GeminiClient`
+   methods.
 
 ## What's real vs. what's a stub
 

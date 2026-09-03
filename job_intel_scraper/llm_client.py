@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
@@ -220,6 +221,35 @@ def _parse_grounding_response(text: str) -> tuple[bool, list[str]]:
     return ok, [f"Malformed grounding-check JSON (quotes likely unescaped): {raw[:300]}"]
 
 
+def _post_gemini_with_retry(url: str, params: dict, payload: dict, timeout: int, max_retries: int = 5) -> dict:
+    """POST to the Gemini API with retry + backoff on 429 (rate limit) and
+    503 (transient overload) responses. Added after a real run: loosening
+    the stage-2 gate to a blended score (see scorer.py) correctly let far
+    more genuine candidates through, which immediately saturated Gemini's
+    free-tier ~15 req/min rate limit — every GeminiClient method was
+    calling requests.post with no retry at all, so a run that qualified,
+    say, 60 candidates would burn through most of them as outright
+    failures (429) rather than pacing itself, wasting the run instead of
+    just taking longer. Honors a Retry-After header when the API sends
+    one, otherwise backs off exponentially (5s, 10s, 20s, 40s, 60s cap)."""
+    delay = 5.0
+    last_exc: Exception | None = None
+    for attempt in range(max_retries):
+        resp = requests.post(url, params=params, json=payload, timeout=timeout)
+        if resp.status_code not in (429, 503):
+            resp.raise_for_status()
+            return resp.json()
+        last_exc = requests.HTTPError(
+            f"{resp.status_code} on attempt {attempt + 1}/{max_retries}: {resp.text[:200]}", response=resp
+        )
+        if attempt < max_retries - 1:
+            retry_after = resp.headers.get("Retry-After")
+            wait = float(retry_after) if retry_after else delay
+            time.sleep(wait)
+            delay = min(delay * 2, 60)
+    raise last_exc
+
+
 class GeminiClient(LLMClient):
     """Free-tier Google AI Studio Gemini API, called directly via REST so no
     extra SDK dependency is required. Get a key at https://aistudio.google.com/apikey
@@ -236,14 +266,9 @@ class GeminiClient(LLMClient):
             resume_text=resume_text, job_title=job_title, job_description=job_description
         )
         url = self.API_URL.format(model=self.model)
-        resp = requests.post(
-            url,
-            params={"key": self.api_key},
-            json={"contents": [{"parts": [{"text": prompt}]}]},
-            timeout=30,
+        data = _post_gemini_with_retry(
+            url, {"key": self.api_key}, {"contents": [{"parts": [{"text": prompt}]}]}, timeout=30,
         )
-        resp.raise_for_status()
-        data = resp.json()
 
         text = data["candidates"][0]["content"]["parts"][0]["text"]
         usage = data.get("usageMetadata", {})
@@ -264,14 +289,9 @@ class GeminiClient(LLMClient):
             job_description=job_description,
         )
         url = self.API_URL.format(model=self.model)
-        resp = requests.post(
-            url,
-            params={"key": self.api_key},
-            json={"contents": [{"parts": [{"text": prompt}]}]},
-            timeout=60,
+        data = _post_gemini_with_retry(
+            url, {"key": self.api_key}, {"contents": [{"parts": [{"text": prompt}]}]}, timeout=60,
         )
-        resp.raise_for_status()
-        data = resp.json()
 
         text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
         usage = data.get("usageMetadata", {})
@@ -285,14 +305,9 @@ class GeminiClient(LLMClient):
     def check_grounding(self, resume_text: str, letter_body: str) -> GroundingResult:
         prompt = GROUNDING_CHECK_PROMPT_TEMPLATE.format(resume_text=resume_text, letter_body=letter_body)
         url = self.API_URL.format(model=self.model)
-        resp = requests.post(
-            url,
-            params={"key": self.api_key},
-            json={"contents": [{"parts": [{"text": prompt}]}]},
-            timeout=30,
+        data = _post_gemini_with_retry(
+            url, {"key": self.api_key}, {"contents": [{"parts": [{"text": prompt}]}]}, timeout=30,
         )
-        resp.raise_for_status()
-        data = resp.json()
 
         text = data["candidates"][0]["content"]["parts"][0]["text"]
         usage = data.get("usageMetadata", {})

@@ -180,15 +180,30 @@ def get_unscored_candidates(conn: sqlite3.Connection, country_code: str) -> list
     """Jobs for this country that haven't been LLM-scored yet and weren't
     hard-excluded on eligibility. Stage-1 threshold filtering happens in
     main.py against the stored breakdown JSON, not here, so the threshold
-    logic stays in one place (scorer.py)."""
+    logic stays in one place (scorer.py).
+
+    Ordered best-stage1-score-first: when a token ceiling (per-country or
+    global) stops main.py's stage-2 loop partway through, it should have
+    already spent its budget on the strongest candidates, not whichever
+    ones happened to come back in arbitrary row order — reproduced live:
+    the single best stage-1 match across all 590 jobs (Waymo, "Vehicle
+    Package and Integration Lead", 57.5) didn't get scored in a real run
+    because lower-scoring US candidates exhausted the budget first.
+
+    Filters on matched_countries, not country_hint directly — same reason
+    as list_jobs: a job whose location fits more than one target country
+    needs to be a stage-2 candidate under EVERY country it matches, not
+    just whichever one it was first seen under.
+    """
     conn.row_factory = sqlite3.Row
     rows = conn.execute(
         """
-        SELECT id, title, description_raw, stage1_breakdown, url
+        SELECT id, title, description_raw, stage1_score, stage1_breakdown, url
         FROM jobs
-        WHERE country_hint = ? AND llm_scored = 0 AND eligibility_verdict != 'hard_exclude'
+        WHERE instr(matched_countries, ?) > 0 AND llm_scored = 0 AND eligibility_verdict != 'hard_exclude'
+        ORDER BY stage1_score DESC
         """,
-        (country_code,),
+        (f",{country_code},",),
     ).fetchall()
     conn.row_factory = None
     return rows

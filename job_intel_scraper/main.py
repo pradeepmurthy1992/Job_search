@@ -19,7 +19,6 @@ import argparse
 import sys
 import uuid
 import time
-import json
 from pathlib import Path
 
 from . import connectors, db, scorer, eligibility, llm_client, git_guard, salary
@@ -61,9 +60,7 @@ def _run_stage2(conn, jurisdiction, run_id: str, global_budget_remaining: int) -
     skipped_low_score = 0
 
     for row in candidates:
-        breakdown_dict = json.loads(row["stage1_breakdown"] or "{}")
-        domain_points = breakdown_dict.get("domain", 0.0)
-        if not scorer.clears_llm_threshold_from_domain_score(domain_points):
+        if not scorer.clears_llm_threshold_from_total_score(row["stage1_score"]):
             skipped_low_score += 1
             continue
 
