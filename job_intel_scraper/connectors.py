@@ -80,6 +80,7 @@ _COUNTRY_KEYWORDS: dict[str, list[str]] = {
     "DE": ["germany", "deutschland", "berlin", "munich", "münchen", "hamburg",
            "frankfurt", "stuttgart", "cologne", "köln", "böblingen"],
     "AE": ["united arab emirates", "uae", "dubai", "abu dhabi", "sharjah"],
+    "SG": ["singapore"],
 }
 _REMOTE_KEYWORDS = ["remote", "anywhere", "distributed", "work from home"]
 # A "remote" location string is often tied to a SPECIFIC other country or

@@ -604,6 +604,113 @@ JURISDICTIONS: dict[str, JurisdictionProfile] = {
             "expected."
         ),
     ),
+    "SG": JurisdictionProfile(
+        name="Singapore",
+        country_code="SG",
+        currency="SGD",
+        sponsorship_keywords=[
+            "employment pass sponsorship available", "we will sponsor your ep",
+            "relocation package", "relocation assistance to singapore",
+            "visa sponsorship provided", "international candidates welcome",
+        ],
+        # Singapore's Fair Consideration Framework REQUIRES most EP
+        # applications to be advertised on MyCareersFuture.sg for 14+ days
+        # open to all candidates first — so "open to Singaporeans and PRs"
+        # / FCF-boilerplate language is routine compliance text that
+        # commonly COEXISTS with active EP sponsorship, not a restriction.
+        # Only the harder "...ONLY" phrasing below is treated as a real
+        # exclusion — eligibility.py's citizenship_restricted_keywords are
+        # hard excludes, so this distinction matters more here than
+        # anywhere else in the config: getting it wrong would hard-exclude
+        # a large share of genuinely sponsorable Singapore postings.
+        citizenship_restricted_keywords=[
+            "singapore citizens and prs only", "open only to singapore citizens",
+            "must have valid singapore work authorization", "no visa sponsorship",
+            "we are unable to sponsor",
+        ],
+        language_requirement_keywords=[],  # English-primary for PMET/expat-track roles
+        sponsorship_required=True,
+        # Automotive OEM/Tier-1 presence on these 4 platforms is
+        # effectively zero for Singapore (no local vehicle manufacturing;
+        # large industrials/semis/aerospace default to Workday/
+        # SuccessFactors, confirmed absent via direct token checks for
+        # Bosch, Continental, ZF, Denso, ST Engineering, SIA Engineering,
+        # Rolls-Royce, Safran, Collins Aerospace, and others — Sep 2026).
+        # Portcast (Singapore-HQ logistics/freight-AI startup) — Lever
+        # "portcast", live-verified: 4 of 9 postings Singapore-tagged,
+        # including a literal "Technical Program Manager" role. Strongest
+        # single find for this country.
+        greenhouse_boards=["moloco", "xendit"],
+        # Moloco (AdTech/AI, real Singapore APAC office) — Greenhouse
+        # "moloco", 3 of 46 SG-tagged incl. "GTM Program Manager".
+        # Xendit (Indonesia-founded fintech, real SEA/Singapore ops) —
+        # Greenhouse "xendit", 7 of 24 include Singapore among eligible
+        # locations (multi-city postings); no PM title live yet.
+        lever_boards=["portcast", "ninjavan"],
+        # Ninja Van (Singapore-HQ logistics/last-mile delivery unicorn) —
+        # Lever "ninjavan", 13 of 157 SG-tagged; currently driver/
+        # warehouse/sales-ops roles only, no PM titles live, but a large
+        # active board worth monitoring.
+        workable_boards=[],
+        # Beam Mobility and Neuron Mobility (both Singapore-founded e-
+        # scooter/micromobility EV companies, Workable "beam-mobility" /
+        # "neuron-mobility") and GlobalFoundries/Infineon (real Singapore
+        # semiconductor operations, Workable "globalfoundries" /
+        # "infineon") all confirmed as genuine, live boards but currently
+        # zero open postings — not added to avoid an always-empty board,
+        # same "verified real, currently empty" treatment as Ajax Systems
+        # (Vietnam) and VDL ETG (Netherlands); worth re-checking
+        # periodically. Crown Equipment (material-handling/forklift
+        # manufacturer, states a Singapore regional HQ, Workable
+        # "crown-equipment") has 68 live postings but all currently
+        # AU-tagged, zero Singapore — also worth re-checking, not added
+        # here since it wouldn't currently surface anything for this
+        # jurisdiction.
+        recruitee_boards=[],
+        local_job_boards=["mycareersfuture.gov.sg", "linkedin.com"],
+        max_jobs_per_run=150,
+        max_llm_tokens_per_run=150_000,
+        visa_note=(
+            "Employment Pass (EP), administered by MOM, is the operative "
+            "route. Since 1 Sep 2023 ALL new EP applications are assessed "
+            "under COMPASS (Complementarity Assessment Framework) — a "
+            "points-based system layered ON TOP OF a salary floor, not a "
+            "simple pass/fail threshold like most other target countries. "
+            "Current (2026) qualifying salary floor: SGD 5,600/month at "
+            "the youngest band, rising on an age-progressive sliding scale "
+            "to SGD 10,700/month at age 45+ (financial-services roles: "
+            "SGD 6,200 rising to SGD 11,800). At candidate's age (35) the "
+            "real floor sits well above the SGD 5,600 headline figure — "
+            "likely in the SGD 8,600-9,600 range by interpolation of "
+            "MOM's published curve (not a directly-quoted MOM figure; "
+            "verify before relying on it for a specific offer). A floor "
+            "increase to SGD 6,000/6,600 is already announced for Jan "
+            "2027. Separately from the salary floor, the applicant must "
+            "score >=40 of 80 possible COMPASS points across six criteria "
+            "(salary margin above local peers, qualifications, workforce-"
+            "nationality diversity at the employer, the EMPLOYER's own "
+            "track record hiring local PMETs, shortage-occupation bonus, "
+            "strategic-sector bonus) — two of the six (employer's local-"
+            "hiring record, workforce diversity mix) are entirely outside "
+            "the candidate's control and invisible from a job posting, so "
+            "unlike US H-1B lottery odds or a clean salary-threshold "
+            "country, Singapore should be treated as 'sponsorship-"
+            "plausible, pass-uncertain' rather than a clean signal either "
+            "way. KEY EXEMPTION: a fixed monthly salary of SGD 22,500+ "
+            "skips COMPASS scoring entirely (straight pass on salary "
+            "alone) — a posting stating pay at or above that level is a "
+            "strong positive signal worth weighting heavily. Most EP "
+            "applications also require the employer to have advertised "
+            "the role on MyCareersFuture.sg for 14+ days under the Fair "
+            "Consideration Framework BEFORE filing — this is why 'open to "
+            "Singaporeans and PRs' / FCF-referencing language is routine "
+            "compliance boilerplate that commonly coexists with active EP "
+            "sponsorship, not a restriction (see citizenship_restricted_"
+            "keywords above for the harder phrasing that IS treated as a "
+            "real exclusion). S Pass (mid-skilled, SGD 3,150+ floor) is "
+            "not relevant given this candidate's seniority."
+        ),
+    ),
 }
 
 

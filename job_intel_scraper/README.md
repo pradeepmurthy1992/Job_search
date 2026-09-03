@@ -2,14 +2,14 @@
 
 A working starting point for the discovery + two-stage scoring half of the
 platform described in `job-intelligence-platform-overview.md`, wired for
-seven target jurisdictions: Vietnam, Netherlands, Australia (original
-scope), plus United States, United Kingdom, Germany, and United Arab
-Emirates (added Sep 2026 per user request). Candidate stance baked into
-`config.py`: employer-sponsorship-only in ALL SEVEN countries — no self-
-funded/independent visa pathway anywhere, no exception (this specifically
-excludes the UAE's self-sponsored Golden Visa route even though the
-candidate's likely salary would qualify). Candidate age 35 (so the Dutch
-under-30 HSM rate never applies). Each country's `visa_note` in config.py
+eight target jurisdictions: Vietnam, Netherlands, Australia (original
+scope), plus United States, United Kingdom, Germany, United Arab Emirates,
+and Singapore (all added Sep 2026 per user request). Candidate stance
+baked into `config.py`: employer-sponsorship-only in ALL EIGHT countries —
+no self-funded/independent visa pathway anywhere, no exception (this
+specifically excludes the UAE's self-sponsored Golden Visa route even
+though the candidate's likely salary would qualify). Candidate age 35 (so
+the Dutch under-30 HSM rate never applies). Each country's `visa_note` in config.py
 is real, researched immigration-rule detail (current 2026 salary
 thresholds, sponsorship mechanics, real sponsorship/restriction phrases
 found in live postings where possible) — never invented, matching the
@@ -399,6 +399,49 @@ which is itself useful information:
   engineering office (the pattern behind Axon/UEI/One Mobility), not
   legacy manufacturers — worth remembering when deciding where to spend a
   future research pass.
+
+### Singapore (added Sep 2026)
+
+No automotive OEM/Tier-1 presence at all on these 4 platforms (Singapore
+has no local vehicle manufacturing) — confirmed absent via direct token
+checks for Bosch, Continental, ZF, Denso, ST Engineering, SIA Engineering,
+Rolls-Royce, Safran, Collins Aerospace, and others.
+
+- **Portcast (Singapore)** — Singapore-HQ logistics/freight-AI startup.
+  Confirmed on **Lever** at `jobs.lever.co/portcast`. Strongest single
+  find: 4 of 9 postings Singapore-tagged, including a literal "Technical
+  Program Manager" role.
+- **Moloco (Singapore)** — AdTech/AI with a real Singapore APAC office.
+  Confirmed on **Greenhouse** at `boards.greenhouse.io/moloco`. 3 of 46
+  postings SG-tagged, including "GTM Program Manager."
+- **Xendit (Singapore)** — Indonesia-founded fintech with real SEA/
+  Singapore operations. Confirmed on **Greenhouse** at
+  `boards.greenhouse.io/xendit`. 7 of 24 postings include Singapore among
+  eligible locations (multi-city postings); no PM title live yet.
+- **Ninja Van (Singapore)** — Singapore-HQ logistics/last-mile delivery
+  unicorn. Confirmed on **Lever** at `jobs.lever.co/ninjavan`. 13 of 157
+  postings SG-tagged; currently driver/warehouse/sales-ops roles only, no
+  PM titles live, but a large active board worth monitoring.
+- Confirmed real but currently zero open postings (same "verified real,
+  re-check periodically" treatment as Ajax Systems/VDL ETG elsewhere):
+  **Beam Mobility** and **Neuron Mobility** (both Singapore-founded
+  e-scooter/micromobility EV companies, Workable), **GlobalFoundries** and
+  **Infineon** (real Singapore semiconductor operations, Workable).
+  **Crown Equipment** (material-handling/forklift manufacturer, states a
+  Singapore regional HQ, Workable "crown-equipment") has 68 live postings
+  but all currently Australia-tagged, zero Singapore.
+- The COMPASS points-based Employment Pass framework (in effect since Sep
+  2023) makes Singapore genuinely different from every other target
+  country's eligibility signal: clearing the salary floor is necessary but
+  not sufficient — two of the six scoring criteria (the employer's own
+  local-hiring track record, workforce-nationality diversity mix) are
+  invisible from a job posting and outside the candidate's control. See
+  `config.py`'s SG `visa_note` for the full breakdown, including the SGD
+  22,500/month threshold that exempts an offer from COMPASS scoring
+  entirely, and why "open to Singaporeans and PRs" is routine Fair
+  Consideration Framework compliance language that commonly coexists with
+  active sponsorship — not the hard restriction it would be almost
+  anywhere else.
 - **Tritium and SEA Electric (Australia)** — both real EV-adjacent
   companies, but found on Employment Hero / bespoke career sites, not any
   of the four ATS platforms this skeleton connects to.
