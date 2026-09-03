@@ -175,17 +175,35 @@ class LLMClient(ABC):
         ...
 
 
+class ScoreParseError(RuntimeError):
+    """Raised when a score_fit response can't be parsed into a real score.
+    Deliberately a hard failure, not a silent 0.0 — a parse failure is not
+    a fit assessment, and treating it as one is actively harmful: live-
+    verified against qwen2.5:7b (Ollama), 7 of 8 AirTrunk postings — one of
+    them the #5 stage-1 match across the whole dataset — got a garbage
+    score=0.0 with 'Could not parse model response' as the reasoning, and
+    because db.record_llm_result was still called, that fake zero got
+    PERMANENTLY cached (llm_scored=1) as if it were a real verdict, taking
+    a real candidate out of consideration for good. Callers should let
+    this propagate — main.py's existing per-candidate exception handling
+    already logs it and leaves the job unscored for a future retry,
+    exactly like a network failure, instead of caching a non-answer."""
+
+
 def _parse_json_response(text: str) -> tuple[float, str]:
     """LLMs sometimes wrap JSON in prose or code fences despite instructions —
-    extract the first {...} block rather than trusting a strict json.loads."""
+    extract the first {...} block rather than trusting a strict json.loads.
+    Raises ScoreParseError (does not return a fake 0.0) when no score can
+    be recovered — see that class's docstring for why this matters."""
     match = re.search(r"\{.*\}", text, re.DOTALL)
-    if not match:
-        return 0.0, f"Could not parse model response: {text[:200]}"
-    try:
-        parsed = json.loads(match.group(0))
-        return float(parsed.get("score", 0)), str(parsed.get("reasoning", ""))
-    except (json.JSONDecodeError, ValueError, TypeError):
-        return 0.0, f"Could not parse model response: {text[:200]}"
+    if match:
+        try:
+            parsed = json.loads(match.group(0))
+            if "score" in parsed:
+                return float(parsed["score"]), str(parsed.get("reasoning", ""))
+        except (json.JSONDecodeError, ValueError, TypeError):
+            pass
+    raise ScoreParseError(f"Could not parse a score from model response: {text[:300]}")
 
 
 def _parse_grounding_response(text: str) -> tuple[bool, list[str]]:
