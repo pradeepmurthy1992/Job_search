@@ -158,7 +158,19 @@ JURISDICTIONS: dict[str, JurisdictionProfile] = {
         # tracking.
         greenhouse_boards=["chargepoint"],
         lever_boards=[],
-        workable_boards=[],
+        # Autocraft Solutions Group (UK parent, Arnhem NL production site) —
+        # EV battery remanufacturing/assembly, "industry":"Automotive" per
+        # the API itself. Confirmed on Workable, live-verified: 3 of 4
+        # postings are Arnhem/NL-tagged (1 UK role correctly excluded by
+        # the location filter), including "Production Manager - Electric
+        # Vehicle Battery Remanufacturing" — one of the strongest direct
+        # functional fits found across all three countries.
+        # (VDL ETG Eindhoven has its own separate Workable board, slug
+        # "vdl-etg", confirmed real and distinct from the VDL ETG Singapore
+        # subsidiary — but 0 open postings right now, so not added; worth
+        # rechecking since the Brainport precision-manufacturing fit is
+        # strong, same category as NTS Group.)
+        workable_boards=["autocraft-solutions-group"],
         # Fastned confirmed via web research (Sep 2026): runs its own careers
         # site on Recruitee at fastned.recruitee.com. High confidence — the
         # domain itself appeared directly in search results. Fastned is EV
@@ -230,7 +242,30 @@ JURISDICTIONS: dict[str, JurisdictionProfile] = {
         ],
         language_requirement_keywords=[],  # English-only market; no flag needed
         sponsorship_required=True,
-        greenhouse_boards=[], lever_boards=[],
+        # AirTrunk (hyperscale data-centre developer, Sydney HQ) — the
+        # single strongest AU find so far. Confirmed on Greenhouse, board
+        # "airtrunk", live-verified: 33 of 79 postings are AU-tagged
+        # (Sydney/Melbourne/Western Sydney), including direct title
+        # matches — Commercial Manager, Cost Manager (x2), Design Manager,
+        # Senior Project Manager. Not automotive, but multi-billion-dollar
+        # infrastructure/construction program delivery is a close
+        # functional match for VAVE/cost-engineering/program-management,
+        # same reasoning as the original AU sector-expansion note below.
+        # Bradken (mining/heavy-equipment wear-parts manufacturer, already
+        # named in the visa_note below as a target sector) confirmed on
+        # Greenhouse too, board "bradken" — its public careers page is
+        # hosted on job-boards.eu.greenhouse.io, but the underlying API is
+        # on the same standard boards-api.greenhouse.io host our connector
+        # already uses, so no special handling was needed. Live-verified:
+        # 9 of 43 postings AU-tagged, including "Management Cost
+        # Accountant" (Perth).
+        greenhouse_boards=["airtrunk", "bradken"],
+        # Emesent (autonomous drone/mapping tech for underground mining,
+        # Brisbane) confirmed on Lever — note the slug is case-sensitive:
+        # "Emesent" (capital E), lowercase 404s. Live-verified: 9 of 9
+        # postings are 100% Brisbane-based, including "Senior Product
+        # Manager" and "Engineering Manager - Data Processing".
+        lever_boards=["Emesent"],
         # Applied EV (Melbourne autonomous/electric commercial-vehicle
         # platform maker) found via web research (Sep 2026) recruiting on
         # Workable under the apply.workable.com/applied-ev URL — re-verified
@@ -240,8 +275,11 @@ JURISDICTIONS: dict[str, JurisdictionProfile] = {
         # Workable too — note its feed isn't country-filtered (returns jobs
         # across AU/UK/US/EU), which is exactly why fetch_all() applies a
         # per-jurisdiction location filter rather than trusting the board
-        # list alone.
-        workable_boards=["applied-ev", "zoomo"],
+        # list alone. Relectrify (Melbourne battery-storage/EV-adjacent
+        # scale-up) confirmed real on Workable too, currently zero open
+        # roles — same "keep configured, currently empty" treatment as
+        # Applied EV.
+        workable_boards=["applied-ev", "zoomo", "relectrify"],
         recruitee_boards=[],
         local_job_boards=["seek.com.au", "indeed.com.au", "linkedin.com"],
         max_jobs_per_run=250,  # AU volume via Seek/Indeed tends to be higher

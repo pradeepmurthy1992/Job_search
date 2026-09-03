@@ -268,11 +268,49 @@ which is itself useful information:
   "Evaluated and deliberately NOT automated" above) and isn't automatable
   without a headless-browser dependency — use the manual-paste form for
   anything not covered by the companies above.
+- **AirTrunk (Australia)** — hyperscale data-centre developer, Sydney HQ.
+  Confirmed on **Greenhouse** at `boards.greenhouse.io/airtrunk`. High
+  confidence, live-verified: 33 of 79 postings are AU-tagged
+  (Sydney/Melbourne/Western Sydney), including direct title matches —
+  Commercial Manager, Cost Manager (x2), Senior Project Manager, Program
+  Manager, Design Manager. Not automotive, but the strongest AU find so
+  far — infrastructure/construction program delivery at this scale is a
+  close functional match for VAVE/cost-engineering/program-management.
+- **Bradken (Australia)** — mining/heavy-equipment wear-parts
+  manufacturer. Confirmed on **Greenhouse** at
+  `boards.greenhouse.io/bradken` (its public careers page is hosted at
+  `job-boards.eu.greenhouse.io/bradken`, but the underlying API is on the
+  same standard host — no special handling needed). High confidence: 9 of
+  43 postings AU-tagged, including "Management Cost Accountant" (Perth).
+- **Emesent (Australia)** — autonomous drone/mapping tech for underground
+  mining, Brisbane. Confirmed on **Lever** at `jobs.lever.co/Emesent`
+  (note: case-sensitive slug, capital E — lowercase 404s). High
+  confidence: 9 of 9 postings are 100% Brisbane-based.
+- **Relectrify (Australia)** — Melbourne battery-storage/EV-adjacent
+  scale-up. Confirmed real on **Workable** at
+  `apply.workable.com/relectrify`, currently zero open roles — kept
+  configured on the same "empty now, re-check later" logic as Applied EV.
 - Aurecon, WSP Australia, GHD, AECOM, and Jacobs (the major AU
   infrastructure/engineering consultancies) were checked and definitively
   ruled out: Workday, Oracle Recruiting Cloud, Oracle Recruiting Cloud,
-  SmartRecruiters, and unconfirmed-but-not-one-of-the-4 respectively —
-  none scrapable by this system.
+  SmartRecruiters, and Avature respectively — none scrapable by this
+  system. Also ruled out with direct evidence this round: Downer EDI Rail
+  (Oracle), UGL Rail (Oracle Taleo), Alstom Australia/Komatsu
+  Australia/Liebherr Australia (all SAP SuccessFactors), Novonix
+  (Dayforce), Sun Metals (Elmo Talent), Beca/SMEC (Workday), Calibre
+  Group (LiveHire), Advanced Navigation (Rippling ATS), Seeing Machines
+  (Teamtailor), Baraja (SwagApp). Redflow entered liquidation in 2024/25 —
+  remove from consideration entirely, not just an ATS mismatch.
+- Every purely automotive/EV manufacturing multinational checked for
+  Vietnam (Denso, ZF, Aptiv, Hyundai Mobis, Yazaki, Continental, plus
+  Intel/Samsung/Foxconn/LG/Jabil/Flex/Benchmark/Sanmina/Celestica on the
+  semiconductor/EMS side) runs Workday, SuccessFactors, or a proprietary
+  portal — a consistent pattern across two full research rounds, not an
+  absence-of-evidence gap. Vietnam's real yield on these 4 platforms
+  comes from newer VC-backed hardware/deeptech companies with a Vietnam
+  engineering office (the pattern behind Axon/UEI/One Mobility), not
+  legacy manufacturers — worth remembering when deciding where to spend a
+  future research pass.
 - **Tritium and SEA Electric (Australia)** — both real EV-adjacent
   companies, but found on Employment Hero / bespoke career sites, not any
   of the four ATS platforms this skeleton connects to.
