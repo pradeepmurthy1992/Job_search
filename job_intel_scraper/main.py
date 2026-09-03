@@ -23,7 +23,7 @@ import json
 from pathlib import Path
 
 from . import connectors, db, scorer, eligibility, llm_client, git_guard, salary
-from .config import JURISDICTIONS
+from .config import JURISDICTIONS, GLOBAL_MAX_LLM_TOKENS_PER_RUN
 
 RESUME_TEXT_PATH = Path(__file__).parent / "resume_summary.txt"
 
@@ -45,7 +45,13 @@ def _load_resume_text() -> str:
     )
 
 
-def _run_stage2(conn, jurisdiction, run_id: str) -> None:
+def _run_stage2(conn, jurisdiction, run_id: str, global_budget_remaining: int) -> int:
+    """Runs stage-2 for one country, stopping at whichever comes first: the
+    country's own max_llm_tokens_per_run, or global_budget_remaining (the
+    run-wide GLOBAL_MAX_LLM_TOKENS_PER_RUN ceiling, tracked across every
+    country in this CLI invocation — see config.py for why this exists
+    alongside the per-country one). Returns tokens actually used, so the
+    caller can decrement its running global total."""
     client = llm_client.build_client_from_env()
     resume_text = _load_resume_text()
 
@@ -70,6 +76,17 @@ def _run_stage2(conn, jurisdiction, run_id: str) -> None:
             )
             break
 
+        if tokens_used_this_run >= global_budget_remaining:
+            print(
+                f"  [stage2] GLOBAL token ceiling for this entire run "
+                f"({GLOBAL_MAX_LLM_TOKENS_PER_RUN}) reached mid-country — "
+                f"stopping stage-2 for {jurisdiction.name} (and every "
+                f"country after it this run), {len(candidates) - scored} "
+                f"jobs left unscored here (they remain llm_scored=0 for "
+                f"next run)."
+            )
+            break
+
         try:
             result = client.score_fit(resume_text, row["title"], row["description_raw"])
         except Exception as exc:  # noqa: BLE001 - one bad call shouldn't kill the run
@@ -86,6 +103,7 @@ def _run_stage2(conn, jurisdiction, run_id: str) -> None:
         f"  [stage2] scored {scored} jobs, skipped {skipped_low_score} below "
         f"threshold, used ~{tokens_used_this_run} tokens this run."
     )
+    return tokens_used_this_run
 
 
 def run(country_codes: list[str], limit_override: int | None = None, run_stage2: bool = False) -> None:
@@ -96,12 +114,24 @@ def run(country_codes: list[str], limit_override: int | None = None, run_stage2:
         sys.exit(1)
 
     conn = db.get_connection()
+    global_tokens_used = 0
 
     for code in country_codes:
         jurisdiction = JURISDICTIONS.get(code)
         if jurisdiction is None:
             print(f"[main] unknown country code {code!r}, skipping", file=sys.stderr)
             continue
+
+        if run_stage2 and global_tokens_used >= GLOBAL_MAX_LLM_TOKENS_PER_RUN:
+            print(
+                f"\n[main] GLOBAL token ceiling ({GLOBAL_MAX_LLM_TOKENS_PER_RUN}) "
+                f"already reached this run — skipping stage-2 for {jurisdiction.name} "
+                f"and every remaining country. Stage-1 discovery/scoring still runs "
+                f"(it's free); only LLM stage-2 is capped."
+            )
+            run_stage2_for_this_country = False
+        else:
+            run_stage2_for_this_country = run_stage2
 
         run_id = str(uuid.uuid4())
         started_at = time.time()
@@ -155,8 +185,13 @@ def run(country_codes: list[str], limit_override: int | None = None, run_stage2:
         )
         conn.commit()
 
-        if run_stage2:
-            _run_stage2(conn, jurisdiction, run_id)
+        if run_stage2_for_this_country:
+            global_budget_remaining = GLOBAL_MAX_LLM_TOKENS_PER_RUN - global_tokens_used
+            tokens_this_country = _run_stage2(conn, jurisdiction, run_id, global_budget_remaining)
+            global_tokens_used += tokens_this_country
+
+    if run_stage2:
+        print(f"\n[main] Total LLM tokens used this run (all countries): {global_tokens_used}")
 
     conn.close()
 

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>LLM Usage</title>
+<style>
+  :root {
+    --bg: #0d0f14; --panel: #161922; --panel-2: #1e2230; --border: #2a2f3d;
+    --text: #e6e8ef; --text-dim: #9aa0b4; --text-faint: #6b7185;
+    --accent: #4f7cff; --accent-2: #7c9bff;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; margin: 0; padding: 0 28px 56px; background: var(--bg); color: var(--text); }
+  h1 { font-size: 21px; margin: 22px 0 4px; font-weight: 700; }
+  a { color: var(--accent-2); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .back-link { display: inline-block; margin-bottom: 16px; font-size: 13px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .kpi-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .kpi-label { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
+  .kpi-value { font-size: 24px; font-weight: 700; margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+  th, td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; text-align: left; }
+  th { background: var(--panel-2); font-weight: 600; color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+  .meta { color: var(--text-faint); font-size: 12px; }
+  .empty { padding: 40px; text-align: center; color: var(--text-faint); }
+</style>
+</head>
+<body>
+  <a class="back-link" href="{{ url_for('jobs_view') }}">&larr; Back to dashboard</a>
+  <h1>LLM Usage</h1>
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-label">Total tokens (all-time)</div>
+      <div class="kpi-value">{{ '{:,}'.format(usage.total_tokens) }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Jobs LLM-scored</div>
+      <div class="kpi-value">{{ '{:,}'.format(usage.total_jobs_llm_scored) }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Runs recorded</div>
+      <div class="kpi-value">{{ '{:,}'.format(usage.total_runs) }}</div>
+    </div>
+  </div>
+
+  {% if not runs %}
+    <div class="empty">No runs recorded yet.</div>
+  {% else %}
+  <table>
+    <thead>
+      <tr>
+        <th>Country</th>
+        <th>Started</th>
+        <th>Jobs fetched</th>
+        <th>Jobs LLM-scored</th>
+        <th>Tokens used</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in runs %}
+      <tr>
+        <td>{{ r.country_name }}</td>
+        <td class="meta">{{ r.started_display }}</td>
+        <td>{{ r.jobs_fetched }}</td>
+        <td>{{ r.jobs_llm_scored }}</td>
+        <td>{{ '{:,}'.format(r.llm_tokens_used) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</body>
+</html>

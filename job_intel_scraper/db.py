@@ -41,6 +41,17 @@ CREATE TABLE IF NOT EXISTS jobs (
     salary_usd_month_max REAL,
     salary_note TEXT,                -- how the figure was derived (structured/extracted/not disclosed)
     origin TEXT DEFAULT 'scraped',   -- 'scraped' | 'manual' (pasted via the dashboard)
+    -- Every jurisdiction this job's location has matched, as a delimited
+    -- string with leading/trailing commas (e.g. ",NL,DE,") so a substring
+    -- check for ",DE," can't false-match ",DEV," or similar. country_hint
+    -- stays the FIRST country this job was seen under (for display) and is
+    -- never overwritten on conflict; matched_countries is the source of
+    -- truth for "does this job show up on country X's tab" — a job whose
+    -- location genuinely fits more than one target country (e.g. a
+    -- "Remote Europe" role matching both NL and DE) is one row, visible on
+    -- every tab it matches, not silently attributed to just whichever
+    -- country's scrape ran first.
+    matched_countries TEXT,
     first_seen_at REAL NOT NULL,
     last_seen_at REAL NOT NULL
 );
@@ -74,6 +85,7 @@ _COLUMNS_ADDED_AFTER_INITIAL_SCHEMA: list[tuple[str, str]] = [
     ("salary_usd_month_max", "REAL"),
     ("salary_note", "TEXT"),
     ("origin", "TEXT DEFAULT 'scraped'"),
+    ("matched_countries", "TEXT"),
 ]
 
 
@@ -82,6 +94,16 @@ def _migrate(conn: sqlite3.Connection) -> None:
     for column, ddl_type in _COLUMNS_ADDED_AFTER_INITIAL_SCHEMA:
         if column not in existing:
             conn.execute(f"ALTER TABLE jobs ADD COLUMN {column} {ddl_type}")
+    # Backfill any row with no matched_countries (a newly-added column
+    # defaults to NULL on every pre-existing row) from its country_hint, so
+    # jobs scraped before this migration don't vanish from their own
+    # country tab — list_jobs' country filter checks matched_countries,
+    # not country_hint directly. Unconditional and idempotent: cheap no-op
+    # once every row has a value, self-heals if one ever slips through.
+    conn.execute(
+        "UPDATE jobs SET matched_countries = ',' || country_hint || ',' "
+        "WHERE matched_countries IS NULL"
+    )
     conn.commit()
 
 
@@ -100,15 +122,21 @@ def upsert_job(conn: sqlite3.Connection, job, breakdown, eligibility, salary_est
     salary_min = salary_estimate.usd_per_month_min if salary_estimate else None
     salary_max = salary_estimate.usd_per_month_max if salary_estimate else None
     salary_note = salary_estimate.note if salary_estimate else None
+    # Wrapped in leading/trailing commas so a later substring check for
+    # ",DE," can't false-match inside a longer code — see the schema
+    # comment on matched_countries for why this exists (one row per
+    # physical posting, visible on every country tab it legitimately
+    # matches, rather than only the first one it was scraped under).
+    new_country_wrapped = f",{job.country_hint},"
     conn.execute(
         """
         INSERT INTO jobs (
-            id, source, board_or_company, country_hint, title, location_raw,
+            id, source, board_or_company, country_hint, matched_countries, title, location_raw,
             url, description_raw, stage1_score, stage1_breakdown,
             eligibility_verdict, eligibility_note, posted_at, company_name,
             salary_usd_month_min, salary_usd_month_max, salary_note, origin,
             first_seen_at, last_seen_at
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(id) DO UPDATE SET
             title=excluded.title,
             location_raw=excluded.location_raw,
@@ -122,10 +150,15 @@ def upsert_job(conn: sqlite3.Connection, job, breakdown, eligibility, salary_est
             salary_usd_month_min=excluded.salary_usd_month_min,
             salary_usd_month_max=excluded.salary_usd_month_max,
             salary_note=excluded.salary_note,
+            matched_countries = CASE
+                WHEN instr(jobs.matched_countries, excluded.matched_countries) > 0
+                THEN jobs.matched_countries
+                ELSE jobs.matched_countries || substr(excluded.matched_countries, 2)
+            END,
             last_seen_at=excluded.last_seen_at
         """,
         (
-            job_id, job.source, job.board_or_company, job.country_hint,
+            job_id, job.source, job.board_or_company, job.country_hint, new_country_wrapped,
             job.title, job.location_raw, job.url, job.description_raw,
             breakdown.total, json.dumps(breakdown.by_category),
             eligibility.verdict, eligibility.note,
@@ -212,8 +245,11 @@ def list_jobs(
     params: list = []
 
     if country:
-        clauses.append("country_hint = ?")
-        params.append(country)
+        # matched_countries, not country_hint — a job whose location fits
+        # more than one target country is one row, visible on every tab it
+        # legitimately matches (see upsert_job / the schema comment).
+        clauses.append("instr(matched_countries, ?) > 0")
+        params.append(f",{country},")
     if posted_within_days is not None:
         cutoff = time.time() - posted_within_days * 86400
         # Jobs with no posted_at at all are kept rather than silently
@@ -291,3 +327,27 @@ def add_run_tokens(conn: sqlite3.Connection, run_id: str, tokens: int, jobs_scor
         (tokens, jobs_scored_delta, run_id),
     )
     conn.commit()
+
+
+def get_usage_summary(conn: sqlite3.Connection) -> dict:
+    """All-time LLM token spend, for the dashboard's cost-visibility KPI —
+    tracked in run_ledger since the start (via add_run_tokens) but never
+    previously surfaced anywhere, which is exactly the "cost is visible
+    rather than assumed" requirement the platform overview calls for."""
+    row = conn.execute(
+        "SELECT COALESCE(SUM(llm_tokens_used), 0), COALESCE(SUM(jobs_llm_scored), 0), COUNT(*) FROM run_ledger"
+    ).fetchone()
+    return {
+        "total_tokens": row[0],
+        "total_jobs_llm_scored": row[1],
+        "total_runs": row[2],
+    }
+
+
+def get_recent_runs(conn: sqlite3.Connection, limit: int = 20) -> list[sqlite3.Row]:
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        "SELECT * FROM run_ledger ORDER BY started_at DESC LIMIT ?", (limit,)
+    ).fetchall()
+    conn.row_factory = None
+    return rows

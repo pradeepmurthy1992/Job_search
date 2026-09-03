@@ -23,6 +23,8 @@
   .kpi-label { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
   .kpi-value { font-size: 24px; font-weight: 700; margin-top: 4px; }
   .kpi-value .unit { font-size: 13px; color: var(--text-dim); font-weight: 500; }
+  .kpi-link { display: block; font-size: 11px; margin-top: 6px; text-decoration: none; }
+  .kpi-link:hover { text-decoration: underline; }
 
   nav.tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
   nav.tabs a { text-decoration: none; padding: 6px 14px; border-radius: 999px; background: var(--panel-2); color: var(--text-dim); font-size: 13px; font-weight: 600; border: 1px solid var(--border); }
@@ -107,6 +109,11 @@
     <div class="kpi-card">
       <div class="kpi-label">Sponsorship confirmed</div>
       <div class="kpi-value">{{ kpis.sponsorship_confirmed }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">LLM tokens used (all-time)</div>
+      <div class="kpi-value">{{ '{:,}'.format(usage.total_tokens) }}</div>
+      <a href="{{ url_for('usage_view') }}" class="kpi-link">View usage detail &rarr;</a>
     </div>
   </div>
 
@@ -254,6 +261,8 @@
           <div class="score-bar"><div class="score-bar-fill" style="width: {{ (job.match_pct or 0)|round|int }}%;"></div></div>
           {% if job.llm_scored %}
             {% if job.llm_reasoning %}<div class="reasoning">{{ job.llm_reasoning }}</div>{% endif %}
+            {% set job_tokens = (job.llm_prompt_tokens or 0) + (job.llm_completion_tokens or 0) %}
+            {% if job_tokens %}<div class="meta">{{ '{:,}'.format(job_tokens) }} tokens</div>{% endif %}
           {% else %}
             <span class="meta">stage-1 only</span>
           {% endif %}

@@ -15,6 +15,48 @@ thresholds, sponsorship mechanics, real sponsorship/restriction phrases
 found in live postings where possible) — never invented, matching the
 rigor of the original NL Highly Skilled Migrant threshold research.
 
+## Self-audit fixes (Sep 2026)
+
+Three real gaps found by re-reading the codebase against the platform
+overview's own stated requirements, not hypothetical — each reproduced
+against real data before being fixed:
+
+1. **No global LLM-token ceiling across a multi-country run.** The
+   platform overview explicitly calls for this ("should be set per-country
+   as well as globally... otherwise one large market can consume the
+   entire run's budget"), and a comment in `config.py` referenced it, but
+   it was never actually implemented — only the per-country ceiling was.
+   With 7 countries' per-country ceilings summing to ~1.45M tokens, a
+   single `--stage2` run had nothing stopping it from spending all of it.
+   Added `GLOBAL_MAX_LLM_TOKENS_PER_RUN` (config.py) and wired it into
+   `main.py`'s `run()` — it stops the ENTIRE run, not just one country,
+   once hit, whether that happens mid-country or before a later country's
+   turn even starts. Verified with an isolated synthetic test covering
+   both cases.
+2. **LLM token spend was tracked but never surfaced anywhere.** `run_ledger`
+   recorded it correctly, but the dashboard had zero visibility into it —
+   directly contradicts the overview's "cost is visible rather than
+   assumed" requirement. Added a "LLM tokens used (all-time)" KPI card,
+   per-job token counts next to the stage-2 score, and a `/usage` detail
+   page (`db.get_usage_summary()` / `db.get_recent_runs()`) showing every
+   run's country, jobs fetched/scored, and token spend.
+3. **A job matching multiple target countries only ever showed up under
+   one of them.** The database key (`source:board:external_id`) doesn't
+   include country, and `country_hint` is (deliberately) never overwritten
+   on conflict — so a job whose location genuinely fits two target
+   countries (e.g. a "Remote - Europe" role) got silently attributed to
+   whichever country's scrape happened to run first in the CLI argument
+   order, and was invisible on every other matching country's tab (though
+   still visible under "ALL"). Confirmed this wasn't hypothetical: 4 real
+   Waymo postings match both US and GB. Fixed with a new
+   `matched_countries` column, merged atomically inside the same
+   `INSERT ... ON CONFLICT` statement `upsert_job` already used (no
+   separate read-before-write needed) — one row per physical posting,
+   visible on every country tab it legitimately matches, with a single
+   shared application-status/notes/LLM-score record (not duplicated per
+   country). Existing rows backfilled from `country_hint` automatically on
+   migration.
+
 ## What's real vs. what's a stub
 
 **Real / runnable:**

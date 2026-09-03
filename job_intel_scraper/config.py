@@ -74,6 +74,21 @@ class JurisdictionProfile:
     visa_note: str = ""
 
 
+# Hard ceiling on total LLM token spend across an ENTIRE multi-country run
+# (e.g. `--countries VN NL AU US GB DE AE --stage2`), independent of each
+# jurisdiction's own max_llm_tokens_per_run. Per the platform overview:
+# "this ceiling should be set per-country as well as globally... otherwise
+# one large market can consume the entire run's budget before the other
+# countries are scored at all." This was referenced in a comment
+# (JurisdictionProfile.max_jobs_per_run's docstring above) since the
+# original 3-country build but never actually implemented — worth noting
+# now that 7 countries' per-country ceilings sum to ~1.45M tokens with
+# nothing previously stopping a single `--stage2` run from spending all of
+# it. main.py checks this before calling _run_stage2 for each country and
+# stops the whole run (not just one country) once it's hit.
+GLOBAL_MAX_LLM_TOKENS_PER_RUN = 500_000
+
+
 JURISDICTIONS: dict[str, JurisdictionProfile] = {
     "VN": JurisdictionProfile(
         name="Vietnam",

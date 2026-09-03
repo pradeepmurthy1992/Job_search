@@ -183,6 +183,12 @@ def jobs_view():
     finally:
         conn.close()
 
+    conn = db.get_connection()
+    try:
+        usage = db.get_usage_summary(conn)
+    finally:
+        conn.close()
+
     return render_template(
         "dashboard.html",
         jobs=jobs,
@@ -193,12 +199,29 @@ def jobs_view():
         statuses=db.VALID_APPLICATION_STATUSES,
         FOLLOW_UP_THRESHOLD_DAYS=FOLLOW_UP_THRESHOLD_DAYS,
         kpis=kpis,
+        usage=usage,
         filters={
             "days_posted": days_posted, "location": location, "company": company,
             "min_match": min_match, "sponsorship": sponsorship, "min_salary": min_salary,
             "automotive_only": automotive_only,
         },
     )
+
+
+@app.route("/usage")
+def usage_view():
+    conn = db.get_connection()
+    try:
+        usage = db.get_usage_summary(conn)
+        runs = [dict(r) for r in db.get_recent_runs(conn, limit=50)]
+    finally:
+        conn.close()
+
+    for r in runs:
+        r["country_name"] = JURISDICTIONS[r["country_hint"]].name if r["country_hint"] in JURISDICTIONS else r["country_hint"]
+        r["started_display"] = time.strftime("%Y-%m-%d %H:%M", time.localtime(r["started_at"])) if r.get("started_at") else "—"
+
+    return render_template("usage.html", usage=usage, runs=runs)
 
 
 @app.route("/jobs/manual", methods=["POST"])
