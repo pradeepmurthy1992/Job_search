@@ -38,6 +38,10 @@ _KNOWN_COMPANY_SECTOR: dict[str, bool] = {
     "applied-ev": True,                     # autonomous/electric commercial-vehicle platform maker (AU)
     "applied ev": True,
     "zoomo": True,                          # light-EV (e-bike/scooter) manufacturer for last-mile delivery (AU)
+    "lucidmotors": True,                    # EV OEM, genuinely manufactures vehicles (US)
+    "lucid motors": True,
+    "ineos-automotive": True,               # Grenadier 4x4 OEM (GB/DE)
+    "ineos automotive": True,
 
     # Adjacent, NOT automotive (EV charging infra, battery mfg, general
     # manufacturing, mining, infrastructure, data-centres) — deliberately
@@ -61,6 +65,21 @@ _KNOWN_COMPANY_SECTOR: dict[str, bool] = {
     "bradken": False,                       # mining/heavy-equipment wear parts (AU)
     "emesent": False,                       # autonomous mining-drone tech (AU)
     "relectrify": False,                    # battery-storage scale-up (AU)
+    "waymo": False,                         # autonomous-driving tech integrated into vehicles built by others — doesn't manufacture vehicles itself (US/GB)
+    "flyzipline": False,                    # drone logistics/hardware, not vehicles (US)
+    "zipline": False,
+    "kodiak": False,                        # autonomous-trucking tech, retrofits trucks built by others, not a manufacturer (US)
+    "samsara": False,                       # IoT/fleet-management hardware, not vehicle manufacturing (US)
+    "archer56": False,                      # eVTOL/aerospace manufacturer — aviation, not automotive (US)
+    "archer aviation": False,
+    "redwoodmaterials": False,              # battery/critical-materials manufacturing, not vehicle-specific (US)
+    "redwood materials": False,
+    "group14": False,                       # silicon battery tech, not vehicle-specific (US)
+    "group14 technologies": False,
+    "freenow": False,                       # mobility/ride-hailing app (BMW/Mercedes JV) — a service, not a vehicle manufacturer (DE)
+    "freenow by lyft": False,
+    "aldar": False,                         # real-estate/infrastructure developer, not automotive at all (AE)
+    "aldar properties": False,
 }
 
 # Conservative fallback for anything not in the table above (manual

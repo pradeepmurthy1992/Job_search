@@ -2,10 +2,18 @@
 
 A working starting point for the discovery + two-stage scoring half of the
 platform described in `job-intelligence-platform-overview.md`, wired for
-three target jurisdictions: Vietnam, Netherlands, Australia. Candidate
-stance baked into `config.py`: employer-sponsorship-only in all three
-countries, candidate age 35 (so the Dutch under-30 HSM rate never applies),
-and Australia scoped beyond pure automotive per the 2026-09 expansion note.
+seven target jurisdictions: Vietnam, Netherlands, Australia (original
+scope), plus United States, United Kingdom, Germany, and United Arab
+Emirates (added Sep 2026 per user request). Candidate stance baked into
+`config.py`: employer-sponsorship-only in ALL SEVEN countries — no self-
+funded/independent visa pathway anywhere, no exception (this specifically
+excludes the UAE's self-sponsored Golden Visa route even though the
+candidate's likely salary would qualify). Candidate age 35 (so the Dutch
+under-30 HSM rate never applies). Each country's `visa_note` in config.py
+is real, researched immigration-rule detail (current 2026 salary
+thresholds, sponsorship mechanics, real sponsorship/restriction phrases
+found in live postings where possible) — never invented, matching the
+rigor of the original NL Highly Skilled Migrant threshold research.
 
 ## What's real vs. what's a stub
 
@@ -322,6 +330,81 @@ researched, zero a few weeks later). Don't expect this connector set alone
 to surface most of the actual job volume — the manual-paste workflow is
 the realistic primary path for Vietnam and for the large AU
 mining/rail/infrastructure employers, not a fallback.
+
+### US / UK / Germany / UAE (added Sep 2026)
+
+Much stronger yield than VN/NL/AU on a per-country basis — the US in
+particular hit its 300-job-per-run cap on the first live scrape. Every
+company below independently verified against the live API (job counts,
+actual location tags) before being added, same discipline as everything
+above.
+
+- **Waymo (US/UK)** — Alphabet's autonomous-driving/robotaxi unit.
+  Confirmed on **Greenhouse** at `boards.greenhouse.io/waymo`. The
+  strongest single find across all 7 countries: 345 total postings, 84
+  US-tagged and 20 UK-tagged, including direct title matches — "NPI
+  Program Manager" (Novi, MI), "Lead Technical Program Manager,
+  Simulation," "Program Manager, UK Regulatory," "Program Manager –
+  Vehicle Recovery, Safety & Logistics" (London). Not automotive by this
+  system's strict company_sector.py classification (Waymo integrates
+  autonomous tech into vehicles built by others, doesn't manufacture them)
+  but a very close functional match regardless.
+- **Lucid Motors (US)** — EV OEM. Confirmed on **Greenhouse** at
+  `boards.greenhouse.io/lucidmotors`. 333 total, 264 US-tagged. Genuine
+  automotive-OEM domain match, classified as automotive in
+  company_sector.py.
+- **Zipline (US)** — drone logistics/hardware manufacturer. Confirmed on
+  **Greenhouse** at `boards.greenhouse.io/flyzipline`. 334 total postings,
+  strong NPI-discipline fit ("NPI Technical Program Manager") — same
+  non-automotive-branded-but-same-discipline pattern as Axon (Vietnam).
+- **INEOS Automotive (GB/DE)** — Grenadier 4x4 OEM, UK-headquartered with
+  its engineering HQ in Böblingen, Germany. Confirmed on **Workable** at
+  `apply.workable.com/ineos-automotive`. 16 total postings. Genuine direct-
+  domain automotive OEM — Procurement Lead (Powertrain/Electrics/Interior),
+  Supplier Risk Manager, Quality Engineer roles are strong VAVE/cost-
+  engineering matches. Classified as automotive.
+- **FREE NOW (Germany)** — BMW Group / Mercedes-Benz Mobility ride-hailing
+  JV, Hamburg HQ. Confirmed on **Greenhouse** at
+  `boards.greenhouse.io/freenow`. 28 Germany-tagged postings (Hamburg/
+  Berlin), including Engineering Manager and General Manager roles — real
+  automotive-parent lineage, though the company itself is a mobility
+  service, not a vehicle manufacturer (classified as not-automotive).
+- **Aldar Properties PJSC (UAE)** — Abu Dhabi's largest master-developer,
+  major mixed-use/infrastructure programs. Confirmed on **Lever** at
+  `jobs.lever.co/aldar`. 48 UAE-tagged postings (Abu Dhabi/Dubai). Not
+  automotive, but large-scale development/infrastructure program delivery
+  is a genuine functional match — same domain-expansion reasoning as
+  AirTrunk (Australia). Two live postings are explicitly tagged "UAE
+  Nationals" — a real, current example of Emiratisation restriction
+  (private-sector mainland companies with 50+ employees face a 2%/year
+  Emirati-hiring quota with real financial penalties for shortfalls;
+  free-zone entities are exempt — see config.py's AE visa_note for detail).
+- Also confirmed real but currently thin on PM-titled roles, kept
+  configured on the same "real board, re-check over time" logic as
+  Applied EV/Relectrify: **Kodiak Robotics** (autonomous trucking,
+  Greenhouse), **Samsara** (IoT/fleet hardware, Greenhouse), **Archer
+  Aviation** (eVTOL/aerospace manufacturing, Greenhouse), **Redwood
+  Materials** (battery/critical-materials manufacturing, Greenhouse),
+  **Group14 Technologies** (silicon battery tech, Greenhouse) — all US.
+  ChargePoint's existing Greenhouse board also carries thin US/UK/Germany
+  volume alongside its NL postings.
+- Ruled out with direct evidence: Ford (Oracle Cloud), Magna/Aptiv/
+  BorgWarner/Adient (all Workday), Rivian/Joby Aviation (iCIMS), Tesla
+  (proprietary in-house), McLaren/Bentley/Aston Martin (bespoke
+  platforms), Volkswagen Group (own portal), Bosch (SmartRecruiters), ZF
+  (SAP SuccessFactors), Masdar/Turner & Townsend (SmartRecruiters), DP
+  World/AECOM/Mace/WSP/Jacobs/ACWA Power/Kuehne+Nagel (no evidence of any
+  of the 4 platforms — large enterprise infra/logistics players
+  consistently run custom or enterprise-class systems). GM/Stellantis/
+  JLR/Nissan UK/Mahle/Brose/Continental/Hella were not positively
+  confirmed either way — treat as likely-but-unverified Workday/
+  SuccessFactors-class, worth a direct-fetch check in a future pass
+  rather than assumed.
+- No Stuttgart/Baden-Württemberg equivalent to Netherlands' Brainport
+  Eindhoven cluster (NTS Group) was found for Germany — flagged as the
+  single biggest open research gap from this round, since Recruitee/
+  Workable customers are structurally harder to find via search-engine
+  discovery than Greenhouse/Lever ones (weaker indexing).
 
 ## Setup
 

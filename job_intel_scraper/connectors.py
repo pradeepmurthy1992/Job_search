@@ -66,6 +66,20 @@ _COUNTRY_KEYWORDS: dict[str, list[str]] = {
            "groningen", "tilburg", "nijmegen", "breda", "almere"],
     "VN": ["vietnam", "viet nam", "hanoi", "ha noi", "ho chi minh", "hcmc",
            "da nang", "hai phong", "can tho"],
+    # "usa"/"united states" alone catches the vast majority of real US
+    # location strings observed live (e.g. Zipline: "Austin, Texas, USA")
+    # — the city list is a backup, not the primary signal, since a PM role
+    # can legitimately be in any US city/state.
+    "US": ["usa", "united states", "u.s.a", "novi", "southfield", "phoenix",
+           "newark", "south san francisco", "mountain view", "pittsburgh",
+           "seattle", "austin", "dallas", "houston", "chicago", "boston",
+           "new york", "los angeles", "san diego", "atlanta", "cleveland"],
+    "GB": ["united kingdom", "uk", "london", "england", "scotland", "wales",
+           "manchester", "birmingham", "bristol", "leeds", "wellingborough",
+           "upper heyford"],
+    "DE": ["germany", "deutschland", "berlin", "munich", "münchen", "hamburg",
+           "frankfurt", "stuttgart", "cologne", "köln", "böblingen"],
+    "AE": ["united arab emirates", "uae", "dubai", "abu dhabi", "sharjah"],
 }
 _REMOTE_KEYWORDS = ["remote", "anywhere", "distributed", "work from home"]
 # A "remote" location string is often tied to a SPECIFIC other country or

@@ -315,6 +315,280 @@ JURISDICTIONS: dict[str, JurisdictionProfile] = {
             "hard-excludes by default here, confirm case by case if pursuing."
         ),
     ),
+    "US": JurisdictionProfile(
+        name="United States",
+        country_code="US",
+        currency="USD",
+        sponsorship_keywords=[
+            "we will sponsor", "h-1b sponsorship available", "will sponsor visa",
+            "immigration support", "we sponsor employment visas",
+            "sponsorship available for this role", "visa sponsorship available",
+            "we retain an immigration lawyer",
+        ],
+        # H-1B is a lottery, not a queue — real research (Sep 2026) found a
+        # blanket "no sponsorship" disclaimer is EXTREMELY common in US
+        # postings regardless of role seniority (live-verified on KPMG,
+        # PrizePicks, LaunchDarkly, Wayfair, BTIG), and functionally means
+        # the same thing as a citizenship restriction for a candidate who
+        # needs sponsorship — so these are hard-excludes here, not a softer
+        # flag, matching how sponsorship_required=True is meant to work.
+        citizenship_restricted_keywords=[
+            "no sponsorship available", "unable to sponsor", "without sponsorship",
+            "no visa sponsorship", "does not sponsor visas", "not able to sponsor",
+            "no h-1b sponsorship", "us citizens only", "must be a us citizen",
+            "authorized to work in the united states without visa sponsorship",
+        ],
+        language_requirement_keywords=[],  # English-only market; no flag needed
+        sponsorship_required=True,
+        # Waymo (Alphabet AV/robotaxi) — Greenhouse "waymo". Best single
+        # find across all 7 jurisdictions: 345 total postings, 84 US-tagged
+        # including "NPI Program Manager" (Novi, MI — direct automotive-NPI
+        # fit) and multiple other PM/TPM titles.
+        # Lucid Motors (EV OEM) — Greenhouse "lucidmotors". 333 total, 264
+        # US-tagged, genuine automotive-OEM domain match (Sr. Program
+        # Manager Supplier Industrialization, HR PMO, Supply Chain).
+        # Zipline (drone logistics/hardware mfg) — Greenhouse "flyzipline".
+        # 334 total, strong NPI-discipline fit (NPI Technical Program
+        # Manager, TPM Manufacturing Engineering) — same pattern as Axon
+        # in the VN config (non-automotive-branded, same NPI/manufacturing-
+        # PM discipline).
+        # Kodiak Robotics (autonomous trucking), Samsara (IoT/fleet
+        # hardware), Archer Aviation (eVTOL/aerospace mfg), Redwood
+        # Materials (battery/critical-materials mfg), Group14 Technologies
+        # (silicon battery tech) — all confirmed live and real, currently
+        # thinner PM-titled volume; kept configured on the same
+        # "real board, re-check over time" logic as Applied EV/Relectrify.
+        greenhouse_boards=[
+            "waymo", "lucidmotors", "flyzipline", "kodiak", "samsara",
+            "archer56", "redwoodmaterials", "group14", "chargepoint",
+        ],
+        lever_boards=[],
+        workable_boards=["ineos-automotive"],
+        recruitee_boards=[],
+        local_job_boards=["linkedin.com", "indeed.com"],
+        max_jobs_per_run=300,  # several very large boards (Waymo/Lucid/Zipline each 300+)
+        max_llm_tokens_per_run=300_000,
+        visa_note=(
+            "H-1B is the only realistic route for this profile (L-1 needs "
+            "1+ year prior employment at a foreign affiliate of the same "
+            "employer first; O-1 'extraordinary ability' is a narrow "
+            "long-shot without patents/awards/press). It is a lottery, not "
+            "a queue: FY2026-27 registration ran Mar 4-19 2026, cap 85,000/"
+            "year, demand runs 3-4x the cap. A Feb 27 2026 DHS rule "
+            "replaced pure-random selection with WAGE-LEVEL-WEIGHTED "
+            "selection — entries scale with the DOL OEWS wage level (I-IV) "
+            "the offered salary meets (Level IV = 4 entries, Level I = 1), "
+            "so a higher-paying offer now has materially better lottery "
+            "odds; worth weighting a job's stated salary as a secondary "
+            "signal when comparing US postings. A Sept 2025 proclamation "
+            "imposing a $100K fee on new H-1B petitions for candidates "
+            "outside the US was struck down by a federal judge Jun 8 2026; "
+            "DHS has appealed — status is UNRESOLVED, treat as a live risk "
+            "factor, not settled law, and re-check before relying on it. "
+            "No fixed salary floor for H-1B itself, but the prevailing-wage/"
+            "LCA requirement (employer must pay the higher of the DOL "
+            "prevailing wage by SOC code + metro, or actual wage for "
+            "similar employees) now indirectly matters via the weighted "
+            "lottery. Given how common a blanket 'no sponsorship' "
+            "disclaimer is regardless of seniority, absence of positive "
+            "sponsorship language should be weighted more cautiously here "
+            "than in NL — this is closer to Vietnam's 'absence weighs "
+            "heavily' treatment than NL's 'absence is not a rejection'."
+        ),
+    ),
+    "GB": JurisdictionProfile(
+        name="United Kingdom",
+        country_code="GB",
+        currency="GBP",
+        sponsorship_keywords=[
+            "skilled worker visa sponsorship", "home office licensed sponsor",
+            "we are able to sponsor", "certificate of sponsorship provided",
+            "visa sponsorship available", "sponsor licence",
+        ],
+        citizenship_restricted_keywords=[
+            "unable to sponsor", "does not hold a sponsor licence",
+            "right to work in the uk required", "must have existing right to work",
+            "uk citizens only",
+        ],
+        language_requirement_keywords=[],  # English-only market; no flag needed
+        sponsorship_required=True,
+        # Waymo (Greenhouse "waymo", shared board with US) — 20 UK-tagged
+        # postings including "Program Manager, UK Regulatory" and "Program
+        # Manager – Vehicle Recovery, Safety & Logistics" (both London).
+        # INEOS Automotive (Grenadier 4x4 OEM, UK HQ) — confirmed on
+        # Workable "ineos-automotive": genuine direct-domain UK automotive
+        # OEM. No PM-titled role currently, but Procurement Lead and
+        # Supplier Risk Manager roles are strong VAVE/cost-engineering
+        # adjacents — most roles are actually at the Böblingen, Germany
+        # engineering HQ, hence also listed under DE below.
+        # Autocraft Solutions Group (Workable, already in NL config) — UK
+        # parent company, has UK-tagged postings (e.g. Quality Engineer,
+        # Wellingborough) alongside its NL production-site roles.
+        greenhouse_boards=["waymo", "chargepoint"],
+        lever_boards=[],
+        workable_boards=["ineos-automotive", "autocraft-solutions-group"],
+        recruitee_boards=[],
+        local_job_boards=["linkedin.com", "indeed.co.uk"],
+        max_jobs_per_run=200,
+        max_llm_tokens_per_run=200_000,
+        visa_note=(
+            "Skilled Worker visa is the only realistic route. Employer "
+            "MUST hold a Home Office Sponsor Licence and issue a "
+            "Certificate of Sponsorship — no licence, no route, full stop; "
+            "this is the single most decisive UK filter, more binary than "
+            "NL's 'recognized sponsor' status. Current minimum salary "
+            "threshold: GBP 41,700/year (in effect since Jul 22 2025, up "
+            "from GBP 38,700) — but the REAL threshold is 'higher of "
+            "GBP 41,700 or the occupation's SOC-code going rate', so an "
+            "actual floor can exceed 41,700 depending on job code; "
+            "wage-indexed, re-check before each hiring season like NL's "
+            "HSM threshold. Role must also meet RQF Level 6 skill level "
+            "and an eligible SOC code. English requirement is CEFR B2 — "
+            "not usually a blocker for this candidate. UK employment "
+            "lawyers note blanket 'no sponsorship' exclusions carry "
+            "discrimination-claim risk under UK law even though they "
+            "remain common — an interesting nuance absent from the other "
+            "three original markets. As of 2026 there are ~127,652 "
+            "licensed Skilled Worker sponsors, a large pool, but licence-"
+            "holding still needs per-company verification, never assumed."
+        ),
+    ),
+    "DE": JurisdictionProfile(
+        name="Germany",
+        country_code="DE",
+        currency="EUR",
+        sponsorship_keywords=[
+            "visasponsoring", "visa-sponsoring", "blue card sponsorship",
+            "unterstützung bei der blauen karte", "relocation package",
+            "relocation support", "international candidates welcome",
+            "we sponsor work visas",
+        ],
+        citizenship_restricted_keywords=[
+            "eu citizens only", "eu-staatsangehörigkeit erforderlich",
+            "must have german work permit", "deutsche staatsangehörigkeit erforderlich",
+        ],
+        language_requirement_keywords=[
+            "fluent german", "verhandlungssicheres deutsch", "deutsch (c1",
+            "german language required", "native german",
+        ],
+        sponsorship_required=True,
+        # ChargePoint (Greenhouse "chargepoint", shared board with NL/US/
+        # UK) — thin but real Germany-tagged volume (Marketing Manager -
+        # Europe, Munich).
+        # FREE NOW (BMW Group / Mercedes-Benz Mobility JV, Hamburg HQ) —
+        # confirmed on Greenhouse "freenow": 28 Germany-tagged postings
+        # (Hamburg/Berlin) including Engineering Manager and General
+        # Manager roles — real automotive-parent lineage (BMW/Mercedes-
+        # Benz backing) even though current reqs skew commercial/tech
+        # rather than program-management.
+        # INEOS Automotive (Workable "ineos-automotive") — most roles are
+        # actually at the Böblingen, Germany engineering HQ (Grenadier 4x4
+        # OEM's technical centre), not just the UK entries above.
+        greenhouse_boards=["chargepoint", "freenow"],
+        lever_boards=[],
+        workable_boards=["ineos-automotive"],
+        recruitee_boards=[],
+        local_job_boards=["linkedin.com", "stepstone.de"],
+        max_jobs_per_run=200,
+        max_llm_tokens_per_run=200_000,
+        visa_note=(
+            "EU Blue Card (Blaue Karte EU, Residence Act para 18g) is the "
+            "primary route. Standard minimum gross salary (2026): "
+            "EUR 50,700/year (EUR 4,225/month) — 50% of the statutory "
+            "pension insurance contribution-assessment ceiling, set "
+            "annually by the BMI. REDUCED shortage-occupation "
+            "(Mangelberufe) threshold (2026): EUR 45,934.20/year "
+            "(EUR 3,827.85/month) — 45.3% of the same ceiling; the "
+            "shortage list is occupation-CODE based and explicitly "
+            "includes mechanical/electrical/civil engineering, so a "
+            "posting with genuine engineering/technical scope (e.g. "
+            "'Program Manager - Vehicle Engineering') plausibly qualifies "
+            "for the reduced rate, while a generically-titled 'Program "
+            "Manager' without an engineering nexus should be judged "
+            "against the standard EUR 50,700 floor — default to the "
+            "standard threshold unless the JD is clearly engineering-"
+            "coded. Both figures are wage-indexed annually — re-check at "
+            "the next BMI cycle, same discipline as NL's HSM threshold. "
+            "Alternative: standard work-visa route (Aufenthaltserlaubnis "
+            "zur Erwerbstätigkeit, para 18a/18b) has no fixed salary floor "
+            "but pay must be 'customary for the region/sector' and the "
+            "path to permanent residency is slower (~4-5 years vs 21-27 "
+            "months on Blue Card) — treat as a fallback, not the primary "
+            "target, since this candidate's seniority likely clears the "
+            "Blue Card threshold anyway. Language is genuinely mixed, not "
+            "a safe default either way: large automotive MNCs (BMW, "
+            "Mercedes-Benz, VW) commonly run global/cross-functional "
+            "program roles in English, while Mittelstand/Tier-1 suppliers "
+            "and domestically-facing roles more often expect German — "
+            "surface language_requirement_keywords per-posting rather "
+            "than assuming a blanket answer for the whole German market."
+        ),
+    ),
+    "AE": JurisdictionProfile(
+        name="United Arab Emirates",
+        country_code="AE",
+        currency="AED",
+        sponsorship_keywords=[
+            "visa sponsorship provided", "employment visa and emirates id provided",
+            "we will sponsor your visa", "relocation support", "visa provided",
+            "medical and emirates id processing included",
+        ],
+        # UAE Nationals-only / Emiratisation restrictions are a real,
+        # PRESENT-DAY factor, not a hypothetical — live-verified Sep 2026
+        # on Aldar Properties' own postings (see visa_note).
+        citizenship_restricted_keywords=[
+            "uae nationals only", "emiratisation position", "must be a uae national",
+        ],
+        language_requirement_keywords=[],  # English-primary for the expatriate-track private sector
+        sponsorship_required=True,
+        # Aldar Properties PJSC (Abu Dhabi's largest master-developer,
+        # major mixed-use/infrastructure development programs) — Lever
+        # "aldar". Live-verified: 48 UAE-tagged postings (Abu Dhabi/
+        # Dubai). Not automotive, but large-scale development/
+        # infrastructure program delivery is a genuine functional match
+        # for program-management/cost-engineering background — same
+        # domain-expansion reasoning as AirTrunk in the AU config. Two
+        # live postings are explicitly tagged "UAE Nationals" — a real
+        # example of the Emiratisation restriction below, not a guess.
+        greenhouse_boards=[],
+        lever_boards=["aldar"],
+        workable_boards=[],
+        recruitee_boards=[],
+        local_job_boards=["linkedin.com", "bayut.com", "gulftalent.com"],
+        max_jobs_per_run=200,
+        max_llm_tokens_per_run=200_000,
+        visa_note=(
+            "Standard route: employer-sponsored Employment Visa + Emirates "
+            "ID via MOHRE (Ministry of Human Resources and Emiratisation). "
+            "No fixed minimum-salary threshold like NL/DE/GB — sponsorship "
+            "is tied to a labor contract/offer letter, medical fitness, "
+            "and Emirates ID issuance, not an income floor. The candidate "
+            "would also independently qualify for a self-sponsored "
+            "'Golden Visa' (10-year residency for high earners) given "
+            "likely salary level, but that is explicitly NOT the target "
+            "route here — this candidate's stance is employer-sponsored "
+            "routes only, everywhere, no exception. Mainland vs free-zone "
+            "matters practically: mainland companies sponsor via MOHRE "
+            "directly and mainland licenses of 50+ employees (now also "
+            "20-49) are subject to a 2%/year Emiratisation quota increase "
+            "(cumulative to 10% since the policy's start), with real "
+            "penalties (AED 6,000/month per unfilled Emirati position, "
+            "escalating annually — documented cases of AED 432,000/year "
+            "exposure for a mid-sized shortfall); free-zone entities "
+            "(DMCC, DIFC, ADGM, Dubai South, etc.) sponsor through their "
+            "own free-zone authority and are EXEMPT from mainland "
+            "Emiratisation quotas — a JD or company page mentioning a "
+            "free-zone entity is a soft positive signal worth noting. "
+            "Emiratisation-driven 'UAE Nationals only' restrictions "
+            "concentrate disproportionately on management/AVP-and-above "
+            "and finance/marketing-strategy roles at MAINLAND companies, "
+            "less so on free-zone or purely technical/engineering roles — "
+            "live-confirmed on Aldar's own postings (Sep 2026). English is "
+            "the practical working language for expatriate-track private-"
+            "sector roles in the target sectors — no language barrier "
+            "expected."
+        ),
+    ),
 }
 
 
