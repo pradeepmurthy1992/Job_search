@@ -113,13 +113,19 @@ JURISDICTIONS: dict[str, JurisdictionProfile] = {
         # automotive branding to the same manufacturing/NPI/VAVE discipline
         # at Western multinationals with Vietnam factories turned up real,
         # live-verified hits (Sep 2026):
-        greenhouse_boards=["axon"],
+        greenhouse_boards=["axon", "formlabs"],
         # Axon (public-safety hardware, HCMC site) — Greenhouse, board
         # token "axon". Not automotive-branded, but genuinely the same
         # NPI/manufacturing Program Management discipline. Verified live:
         # 22 of 511 postings are Ho Chi Minh City-based as of Sep 2026,
         # including "Employee Experience Program Manager II" and
         # "Engineering Manager, Connected Devices".
+        # Formlabs (3D printing/additive manufacturing hardware) —
+        # Greenhouse, board token "formlabs". Found via my.greenhouse.io's
+        # candidate job search, not the systematic per-country sweep —
+        # confirmed live: literal "Operation Program Manager, Southeast
+        # Asia" role based in Hanoi. Same NPI/manufacturing-PM discipline
+        # fit as Axon.
         lever_boards=["uei"],
         # Universal Electronics Inc. (consumer-electronics manufacturer,
         # Hai Duong City factory) — Lever, slug "uei". Verified live: 7 of
@@ -395,11 +401,17 @@ JURISDICTIONS: dict[str, JurisdictionProfile] = {
         # manufacturing/technician roles, not the PM ones) carry explicit
         # US-citizenship/no-sponsorship language — worth flagging per-
         # posting via eligibility.py rather than excluding the company.
+        # Formlabs (3D printing/additive manufacturing hardware) — found
+        # via my.greenhouse.io's candidate search, same NPI/manufacturing-
+        # PM discipline as Zipline/Axon. 8 PM-titled US roles confirmed
+        # live (Somerville, MA), incl. "Technical Program Manager" and
+        # "Senior Technical Program Manager".
         greenhouse_boards=[
             "waymo", "lucidmotors", "flyzipline", "kodiak", "samsara",
             "archer56", "redwoodmaterials", "group14", "chargepoint",
             "nuro", "motional", "solidpower", "silananotechnologies",
             "faradayfuture", "maymobility", "scoutmotors", "gotion",
+            "formlabs",
         ],
         # Zoox (Amazon robotaxi/AV) — Lever "zoox", 32 US PM-titled roles,
         # by far the deepest single find of this round (Foster City, CA).
@@ -409,7 +421,7 @@ JURISDICTIONS: dict[str, JurisdictionProfile] = {
         workable_boards=["ineos-automotive"],
         recruitee_boards=[],
         local_job_boards=["linkedin.com", "indeed.com"],
-        max_jobs_per_run=2500,  # true uncapped US-matched total measured at 2,369 postings after the Sep 2026 9-company expansion plus two location-matching fixes: US state names/abbreviations (see _COUNTRY_KEYWORDS/_US_STATE_ABBREVIATIONS in connectors.py) and a bare "Remote - UK" false-positive fix; set above that so nothing is silently truncated — stage-1 scoring is free, only stage-2 LLM calls are cost-gated separately via max_llm_tokens_per_run
+        max_jobs_per_run=2700,  # true uncapped US-matched total measured at 2,514 postings after the Sep 2026 expansion (9 companies + Formlabs) plus two location-matching fixes: US state names/abbreviations (see _COUNTRY_KEYWORDS/_US_STATE_ABBREVIATIONS in connectors.py) and a bare "Remote - UK" false-positive fix; set above that so nothing is silently truncated — stage-1 scoring is free, only stage-2 LLM calls are cost-gated separately via max_llm_tokens_per_run
         max_llm_tokens_per_run=300_000,
         visa_note=(
             "H-1B is the only realistic route for this profile (L-1 needs "
