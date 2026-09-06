@@ -344,6 +344,23 @@ def add_run_tokens(conn: sqlite3.Connection, run_id: str, tokens: int, jobs_scor
     conn.commit()
 
 
+def get_distinct_companies(conn: sqlite3.Connection) -> list[str]:
+    """Distinct company names across every job in the DB, for the dashboard's
+    company-filter autocomplete — lets the user pick from companies that
+    actually exist rather than guessing spelling/casing."""
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        """
+        SELECT DISTINCT name FROM (
+            SELECT COALESCE(NULLIF(company_name, ''), board_or_company) AS name FROM jobs
+        )
+        WHERE name IS NOT NULL AND name != ''
+        ORDER BY name COLLATE NOCASE
+        """
+    ).fetchall()
+    return [r["name"] for r in rows]
+
+
 def get_usage_summary(conn: sqlite3.Connection) -> dict:
     """All-time LLM token spend, for the dashboard's cost-visibility KPI —
     tracked in run_ledger since the start (via add_run_tokens) but never

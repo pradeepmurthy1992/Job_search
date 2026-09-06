@@ -80,6 +80,9 @@ _KNOWN_COMPANY_SECTOR: dict[str, bool] = {
     "freenow by lyft": False,
     "aldar": False,                         # real-estate/infrastructure developer, not automotive at all (AE)
     "aldar properties": False,
+    "finn": False,                          # car-subscription/fleet-management service, not a vehicle manufacturer (DE)
+    "instagrid": False,                     # portable battery/energy-storage manufacturer, not vehicle-specific (DE)
+    "weride": True,                         # autonomous driving/robotaxi vehicle developer (SG)
 }
 
 # Conservative fallback for anything not in the table above (manual

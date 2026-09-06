@@ -186,6 +186,7 @@ def jobs_view():
     conn = db.get_connection()
     try:
         usage = db.get_usage_summary(conn)
+        company_choices = db.get_distinct_companies(conn)
     finally:
         conn.close()
 
@@ -200,6 +201,7 @@ def jobs_view():
         FOLLOW_UP_THRESHOLD_DAYS=FOLLOW_UP_THRESHOLD_DAYS,
         kpis=kpis,
         usage=usage,
+        company_choices=company_choices,
         filters={
             "days_posted": days_posted, "location": location, "company": company,
             "min_match": min_match, "sponsorship": sponsorship, "min_salary": min_salary,

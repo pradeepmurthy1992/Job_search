@@ -70,6 +70,10 @@
   .badge.flag_for_review { background: var(--amber-bg); color: var(--amber); }
   .badge.hard_exclude { background: var(--red-bg); color: var(--red); }
   .elig-note { font-size: 11px; color: var(--text-faint); margin-top: 4px; max-width: 220px; }
+  .clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
+  .clamp.expanded { display: block; -webkit-line-clamp: unset; overflow: visible; }
+  .clamp::after { content: "more"; display: block; color: var(--accent); font-size: 10px; }
+  .clamp.expanded::after { content: "less"; }
   .country-pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--panel-2); font-size: 11px; font-weight: 700; color: var(--text-dim); }
   select, textarea, button { font: inherit; }
   select { padding: 4px 6px; border-radius: 5px; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); }
@@ -143,7 +147,10 @@
     </div>
     <div class="filter-field">
       <label>Company</label>
-      <input type="text" name="company" placeholder="e.g. Fastned" value="{{ filters.company }}">
+      <input type="text" name="company" list="company-list" placeholder="e.g. Fastned" value="{{ filters.company }}">
+      <datalist id="company-list">
+        {% for c in company_choices %}<option value="{{ c }}">{% endfor %}
+      </datalist>
     </div>
     <div class="filter-field">
       <label>Min match %</label>
@@ -260,7 +267,7 @@
           <div class="score">{{ job.match_pct|round(0)|int if job.match_pct is not none else '—' }}%</div>
           <div class="score-bar"><div class="score-bar-fill" style="width: {{ (job.match_pct or 0)|round|int }}%;"></div></div>
           {% if job.llm_scored %}
-            {% if job.llm_reasoning %}<div class="reasoning">{{ job.llm_reasoning }}</div>{% endif %}
+            {% if job.llm_reasoning %}<div class="reasoning clamp">{{ job.llm_reasoning }}</div>{% endif %}
             {% set job_tokens = (job.llm_prompt_tokens or 0) + (job.llm_completion_tokens or 0) %}
             {% if job_tokens %}<div class="meta">{{ '{:,}'.format(job_tokens) }} tokens</div>{% endif %}
           {% else %}
@@ -277,7 +284,7 @@
         </td>
         <td>
           <span class="badge {{ job.eligibility_verdict }}">{{ job.eligibility_verdict.replace('_', ' ') }}</span>
-          <div class="elig-note">{{ job.eligibility_note }}</div>
+          <div class="elig-note clamp">{{ job.eligibility_note }}</div>
         </td>
         <td>
           <form class="status-form" method="post" action="{{ url_for('update_status', job_id=job.id) }}">
@@ -369,6 +376,10 @@ document.querySelectorAll('.gen-letter').forEach(btn => {
       btn.disabled = false;
     }
   });
+});
+
+document.querySelectorAll('.clamp').forEach(el => {
+  el.addEventListener('click', () => el.classList.toggle('expanded'));
 });
 </script>
 </body>

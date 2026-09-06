@@ -499,10 +499,17 @@ JURISDICTIONS: dict[str, JurisdictionProfile] = {
         # INEOS Automotive (Workable "ineos-automotive") — most roles are
         # actually at the Böblingen, Germany engineering HQ (Grenadier 4x4
         # OEM's technical centre), not just the UK entries above.
+        # FINN (Lever "finn", Munich car-subscription/fleet-management
+        # scaleup) — 28 live postings, nearly all Munich/Germany, incl.
+        # fleet-operations roles (Compound Manager, Senior Fleet
+        # Coordinator) directly in the vehicle-fleet domain.
+        # instagrid (Recruitee "instagrid", Ludwigsburg portable-battery/
+        # energy-storage company) — confirmed live "Technical Project
+        # Manager - Product Delivery" opening in Ludwigsburg, DE.
         greenhouse_boards=["chargepoint", "freenow"],
-        lever_boards=[],
+        lever_boards=["finn"],
         workable_boards=["ineos-automotive"],
-        recruitee_boards=[],
+        recruitee_boards=["instagrid"],
         local_job_boards=["linkedin.com", "stepstone.de"],
         max_jobs_per_run=200,
         max_llm_tokens_per_run=200_000,
@@ -646,7 +653,10 @@ JURISDICTIONS: dict[str, JurisdictionProfile] = {
         # Xendit (Indonesia-founded fintech, real SEA/Singapore ops) —
         # Greenhouse "xendit", 7 of 24 include Singapore among eligible
         # locations (multi-city postings); no PM title live yet.
-        lever_boards=["portcast", "ninjavan"],
+        # WeRide (autonomous driving/robotaxi, One-north Singapore R&D hub)
+        # — Lever "weride", live-verified: literal "Global Technical
+        # Project Manager" role at One-north, Singapore.
+        lever_boards=["portcast", "ninjavan", "weride"],
         # Ninja Van (Singapore-HQ logistics/last-mile delivery unicorn) —
         # Lever "ninjavan", 13 of 157 SG-tagged; currently driver/
         # warehouse/sales-ops roles only, no PM titles live, but a large
