@@ -619,7 +619,15 @@ JURISDICTIONS: dict[str, JurisdictionProfile] = {
         # domain-expansion reasoning as AirTrunk in the AU config. Two
         # live postings are explicitly tagged "UAE Nationals" — a real
         # example of the Emiratisation restriction below, not a guess.
-        greenhouse_boards=[],
+        # AI71 (Abu Dhabi Autonomous Racing League's autonomous-vehicle/
+        # racing-AI developer) — Greenhouse, board token "ai71jobs" (not
+        # the more obvious "ai71" — that token resolves but returns zero
+        # jobs). Found via my.greenhouse.io's candidate search, not the
+        # systematic per-country sweep. Live-verified: 19 Abu Dhabi-tagged
+        # postings incl. literal "Technical Program Manager (ASK)" and
+        # "Head of Programs and Product Operations" — direct automotive/
+        # AV domain fit, UAE's strongest single find so far.
+        greenhouse_boards=["ai71jobs"],
         lever_boards=["aldar"],
         workable_boards=[],
         recruitee_boards=[],

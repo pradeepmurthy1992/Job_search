@@ -85,6 +85,7 @@ _KNOWN_COMPANY_SECTOR: dict[str, bool] = {
     "weride": True,                         # autonomous driving/robotaxi vehicle developer (SG)
     "wayve": True,                          # autonomous driving vehicle developer (GB)
     "formlabs": False,                      # 3D printing/additive manufacturing hardware, not vehicle-specific (VN/US)
+    "ai71jobs": True,                       # autonomous racing vehicle/AI developer (AE)
     "nuro": True,                           # autonomous delivery vehicle manufacturer (US)
     "motional": True,                       # autonomous vehicle developer, Aptiv/Hyundai JV (US)
     "solidpower": False,                    # solid-state battery manufacturing, not vehicle-specific (US)
