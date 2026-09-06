@@ -84,6 +84,21 @@ _KNOWN_COMPANY_SECTOR: dict[str, bool] = {
     "instagrid": False,                     # portable battery/energy-storage manufacturer, not vehicle-specific (DE)
     "weride": True,                         # autonomous driving/robotaxi vehicle developer (SG)
     "wayve": True,                          # autonomous driving vehicle developer (GB)
+    "nuro": True,                           # autonomous delivery vehicle manufacturer (US)
+    "motional": True,                       # autonomous vehicle developer, Aptiv/Hyundai JV (US)
+    "solidpower": False,                    # solid-state battery manufacturing, not vehicle-specific (US)
+    "solid power": False,
+    "silananotechnologies": False,          # battery materials, not vehicle-specific (US)
+    "sila nanotechnologies": False,
+    "faradayfuture": True,                  # EV manufacturer (US)
+    "faraday future": True,
+    "maymobility": True,                    # autonomous shuttle vehicle operator (US)
+    "may mobility": True,
+    "scoutmotors": True,                    # Volkswagen Group's US truck OEM brand (US)
+    "scout motors": True,
+    "gotion": False,                        # EV battery gigafactory, not vehicle-specific (US)
+    "zoox": True,                           # autonomous robotaxi manufacturer, Amazon-owned (US)
+    "aeva": False,                          # lidar/sensing hardware supplier, not vehicle-specific (US)
 }
 
 # Conservative fallback for anything not in the table above (manual

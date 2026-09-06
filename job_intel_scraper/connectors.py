@@ -66,14 +66,33 @@ _COUNTRY_KEYWORDS: dict[str, list[str]] = {
            "groningen", "tilburg", "nijmegen", "breda", "almere"],
     "VN": ["vietnam", "viet nam", "hanoi", "ha noi", "ho chi minh", "hcmc",
            "da nang", "hai phong", "can tho"],
-    # "usa"/"united states" alone catches the vast majority of real US
-    # location strings observed live (e.g. Zipline: "Austin, Texas, USA")
-    # — the city list is a backup, not the primary signal, since a PM role
-    # can legitimately be in any US city/state.
-    "US": ["usa", "united states", "u.s.a", "novi", "southfield", "phoenix",
-           "newark", "south san francisco", "mountain view", "pittsburgh",
-           "seattle", "austin", "dallas", "houston", "chicago", "boston",
-           "new york", "los angeles", "san diego", "atlanta", "cleveland"],
+    # "usa"/"united states" alone catches many real US location strings
+    # (e.g. Zipline: "Austin, Texas, USA"), but plenty of ATS boards use a
+    # bare "City, State" format with no country suffix at all (e.g. Gotion:
+    # "Fremont, California", Solid Power: "Thornton CO 80023") — live-
+    # verified Sep 2026 to silently drop 100% of several real companies'
+    # postings (Gotion's entire board, incl. 6 genuine Program Manager
+    # titles) when only "usa"/"united states" plus a short curated city
+    # list were checked. Full state names + USPS abbreviations close that
+    # gap; the earlier city list is kept as a backup for "City Name" alone
+    # with no state at all (e.g. bare "Mountain View").
+    "US": [
+        "usa", "united states", "u.s.a", "novi", "southfield", "phoenix",
+        "newark", "south san francisco", "mountain view", "pittsburgh",
+        "seattle", "austin", "dallas", "houston", "chicago", "boston",
+        "new york", "los angeles", "san diego", "atlanta", "cleveland",
+        "alabama", "alaska", "arizona", "arkansas", "california", "colorado",
+        "connecticut", "delaware", "florida", "georgia", "hawaii", "idaho",
+        "illinois", "indiana", "iowa", "kansas", "kentucky", "louisiana",
+        "maine", "maryland", "massachusetts", "michigan", "minnesota",
+        "mississippi", "missouri", "montana", "nebraska", "nevada",
+        "new hampshire", "new jersey", "new mexico", "north carolina",
+        "north dakota", "ohio", "oklahoma", "oregon", "pennsylvania",
+        "rhode island", "south carolina", "south dakota", "tennessee",
+        "texas", "utah", "vermont", "virginia", "washington",
+        "west virginia", "wisconsin", "wyoming", "washington, d.c.",
+        "washington dc",
+    ],
     "GB": ["united kingdom", "uk", "london", "england", "scotland", "wales",
            "manchester", "birmingham", "bristol", "leeds", "wellingborough",
            "upper heyford"],
@@ -82,6 +101,20 @@ _COUNTRY_KEYWORDS: dict[str, list[str]] = {
     "AE": ["united arab emirates", "uae", "dubai", "abu dhabi", "sharjah"],
     "SG": ["singapore"],
 }
+# Some US boards format multi-site postings as bare "City, ST" pairs with
+# no full state name or "United States" anywhere (e.g. Sila Nanotechnologies:
+# "Alameda, CA; Moses Lake, WA") — the state-name keyword list above can't
+# catch these. Matched case-sensitively against the ORIGINAL (non-lowered)
+# location string, since lowercasing would make 2-letter codes collide with
+# ordinary words.
+_US_STATE_ABBREVIATIONS = {
+    "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID",
+    "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS",
+    "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK",
+    "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV",
+    "WI", "WY", "DC",
+}
+_US_STATE_ABBR_PATTERN = re.compile(r",\s*([A-Z]{2})\b")
 _REMOTE_KEYWORDS = ["remote", "anywhere", "distributed", "work from home"]
 # A "remote" location string is often tied to a SPECIFIC other country or
 # US state ("Texas-Remote, United States", "France-Remote") — observed live
@@ -101,7 +134,11 @@ _OTHER_COUNTRY_SIGNALS = [
     "canada", "mexico",
     "brazil", "argentina", "colombia", "chile", "peru", "ecuador",
     "uruguay", "paraguay", "bolivia", "venezuela", "costa rica", "panama",
-    "united kingdom", "england", "scotland", "wales",
+    # Bare "UK" (not just "united kingdom") since "Remote - UK" is a common
+    # Greenhouse pattern (live-verified on Samsara) that the full-name-only
+    # check was letting slip through as an ambiguous remote match for every
+    # other jurisdiction, including US.
+    "united kingdom", "- uk", "(uk)", ", uk", " uk)", " uk -", "england", "scotland", "wales",
     "ireland", "france", "germany", "spain", "italy", "portugal",
     "poland", "ukraine", "romania", "bulgaria", "hungary", "czech",
     "slovakia", "slovenia", "croatia", "serbia", "greece", "austria",
@@ -195,6 +232,10 @@ def _location_matches(job: Job, country_code: str) -> bool:
 
     if any(kw in text for kw in _COUNTRY_KEYWORDS.get(country_code, [])):
         return True
+    if country_code.upper() == "US":
+        for abbr in _US_STATE_ABBR_PATTERN.findall(job.location_raw or ""):
+            if abbr in _US_STATE_ABBREVIATIONS:
+                return True
     if any(kw in text for kw in _REMOTE_KEYWORDS):
         # "Remote" tied to a specific other place ("Texas-Remote, United
         # States", "France-Remote") is remote *for that place*, not

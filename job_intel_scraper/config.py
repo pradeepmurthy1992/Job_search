@@ -373,15 +373,43 @@ JURISDICTIONS: dict[str, JurisdictionProfile] = {
         # (silicon battery tech) — all confirmed live and real, currently
         # thinner PM-titled volume; kept configured on the same
         # "real board, re-check over time" logic as Applied EV/Relectrify.
+        # Sep 2026 expansion — all live-verified with genuine US-tagged
+        # Program/Project Manager titles:
+        # Nuro (AV delivery robots) — 3 PM-titled incl. "Senior Program
+        # Manager, Perception Data Operations" (Mountain View, CA).
+        # Motional (Aptiv/Hyundai AV JV) — 4 PM-titled incl. "Staff
+        # Technical Program Manager" (Boston/Pittsburgh/Remote US).
+        # Solid Power (solid-state EV battery mfr) — "Program Manager/
+        # Senior Program Manager" (Thornton, CO).
+        # Sila Nanotechnologies (battery materials) — 2 PM-titled incl.
+        # "Senior Project Manager, Capital Projects" (Alameda, CA).
+        # Faraday Future (EV OEM) — "Project Management Specialist"
+        # (El Segundo, CA).
+        # May Mobility (autonomous shuttle operator) — "Senior Autonomy
+        # Technical Project Manager" (Ann Arbor, MI).
+        # Scout Motors (VW's US truck/OEM brand) — 3 PM-titled incl. "IT
+        # Project Manager, AI" (Charlotte, NC).
+        # Gotion (EV battery gigafactory) — 6 PM-titled incl. "Program
+        # Manager" and multiple "Technical Program Manager, Battery"
+        # (Fremont/Irvine, CA). Note: ~13/145 of its postings (mostly
+        # manufacturing/technician roles, not the PM ones) carry explicit
+        # US-citizenship/no-sponsorship language — worth flagging per-
+        # posting via eligibility.py rather than excluding the company.
         greenhouse_boards=[
             "waymo", "lucidmotors", "flyzipline", "kodiak", "samsara",
             "archer56", "redwoodmaterials", "group14", "chargepoint",
+            "nuro", "motional", "solidpower", "silananotechnologies",
+            "faradayfuture", "maymobility", "scoutmotors", "gotion",
         ],
-        lever_boards=[],
+        # Zoox (Amazon robotaxi/AV) — Lever "zoox", 32 US PM-titled roles,
+        # by far the deepest single find of this round (Foster City, CA).
+        # Aeva (automotive lidar/sensing) — Lever "aeva", 2 PM-titled incl.
+        # "Staff Module Engineering Program Manager" (Mountain View, CA).
+        lever_boards=["zoox", "aeva"],
         workable_boards=["ineos-automotive"],
         recruitee_boards=[],
         local_job_boards=["linkedin.com", "indeed.com"],
-        max_jobs_per_run=300,  # several very large boards (Waymo/Lucid/Zipline each 300+)
+        max_jobs_per_run=2500,  # true uncapped US-matched total measured at 2,369 postings after the Sep 2026 9-company expansion plus two location-matching fixes: US state names/abbreviations (see _COUNTRY_KEYWORDS/_US_STATE_ABBREVIATIONS in connectors.py) and a bare "Remote - UK" false-positive fix; set above that so nothing is silently truncated — stage-1 scoring is free, only stage-2 LLM calls are cost-gated separately via max_llm_tokens_per_run
         max_llm_tokens_per_run=300_000,
         visa_note=(
             "H-1B is the only realistic route for this profile (L-1 needs "
