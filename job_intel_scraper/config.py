@@ -439,10 +439,17 @@ JURISDICTIONS: dict[str, JurisdictionProfile] = {
         # Autocraft Solutions Group (Workable, already in NL config) — UK
         # parent company, has UK-tagged postings (e.g. Quality Engineer,
         # Wellingborough) alongside its NL production-site roles.
-        greenhouse_boards=["waymo", "chargepoint"],
+        # Wayve (autonomous driving, London) — Greenhouse "wayve",
+        # live-verified: 6 genuine Program/Technical-Program-Manager
+        # titled roles in London, strongest single find for GB.
+        # Fastned (EV charging, already in NL config) — same live board,
+        # 3 UK-tagged postings (London) incl. "Senior Expansion Manager
+        # UK" — expansion/programme-management-flavored, not literally
+        # "Project Manager" but a real fit.
+        greenhouse_boards=["waymo", "chargepoint", "wayve"],
         lever_boards=[],
         workable_boards=["ineos-automotive", "autocraft-solutions-group"],
-        recruitee_boards=[],
+        recruitee_boards=["fastned"],
         local_job_boards=["linkedin.com", "indeed.co.uk"],
         max_jobs_per_run=200,
         max_llm_tokens_per_run=200_000,

@@ -83,6 +83,7 @@ _KNOWN_COMPANY_SECTOR: dict[str, bool] = {
     "finn": False,                          # car-subscription/fleet-management service, not a vehicle manufacturer (DE)
     "instagrid": False,                     # portable battery/energy-storage manufacturer, not vehicle-specific (DE)
     "weride": True,                         # autonomous driving/robotaxi vehicle developer (SG)
+    "wayve": True,                          # autonomous driving vehicle developer (GB)
 }
 
 # Conservative fallback for anything not in the table above (manual
