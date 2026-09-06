@@ -146,9 +146,9 @@ def jobs_view():
     sponsorship = request.args.get("sponsorship", "").strip()
     min_salary = request.args.get("min_salary", "").strip()
     automotive_only = request.args.get("automotive_only", "").strip() == "1"
+    hide_work_permit_required = request.args.get("hide_work_permit_required", "").strip() == "1"
 
-    filter_kwargs = dict(
-        country=None if country == "ALL" else country,
+    base_filter_kwargs = dict(
         posted_within_days=int(days_posted) if days_posted.isdigit() else None,
         location_contains=location or None,
         company_contains=company or None,
@@ -157,31 +157,42 @@ def jobs_view():
         min_salary_usd_month=_parse_float_filter(min_salary),
     )
 
+    def _apply_python_filters(rows):
+        shaped = [_shape_job_row(r) for r in rows]
+        # Applied in Python, not SQL: company-sector classification is a
+        # curated lookup + keyword fallback (company_sector.py), and
+        # eligibility_verdict here means "excluded outright" rather than
+        # a specific value to match, neither of which is a clean WHERE
+        # clause on top of the eligibility_verdict= filter above.
+        if automotive_only:
+            shaped = [j for j in shaped if j["is_automotive"]]
+        if hide_work_permit_required:
+            shaped = [j for j in shaped if j["eligibility_verdict"] != "hard_exclude"]
+        return shaped
+
     conn = db.get_connection()
     try:
-        rows = db.list_jobs(conn, **filter_kwargs)
+        rows = db.list_jobs(conn, country=None if country == "ALL" else country, **base_filter_kwargs)
     finally:
         conn.close()
 
-    jobs = [_shape_job_row(r) for r in rows]
-    # Applied in Python, not SQL: company-sector classification is a
-    # curated lookup + keyword fallback (company_sector.py), not something
-    # cleanly expressible as a WHERE clause.
-    if automotive_only:
-        jobs = [j for j in jobs if j["is_automotive"]]
+    jobs = _apply_python_filters(rows)
     kpis = _compute_kpis(jobs)
 
     conn = db.get_connection()
     try:
         counts = {}
         for code in JURISDICTIONS:
-            country_rows = [_shape_job_row(r) for r in db.list_jobs(conn, country=code)]
-            if automotive_only:
-                country_rows = [r for r in country_rows if r["is_automotive"]]
+            country_rows = _apply_python_filters(db.list_jobs(conn, country=code, **base_filter_kwargs))
             counts[code] = len(country_rows)
         counts["ALL"] = sum(counts.values())
     finally:
         conn.close()
+
+    # Every filter currently in the query string, minus country — used to
+    # build country-tab links so switching tabs doesn't reset filters, and
+    # they stay applied until the user hits Clear (which links with none).
+    tab_query = {k: v for k, v in request.args.items() if k != "country" and v}
 
     conn = db.get_connection()
     try:
@@ -202,10 +213,12 @@ def jobs_view():
         kpis=kpis,
         usage=usage,
         company_choices=company_choices,
+        tab_query=tab_query,
         filters={
             "days_posted": days_posted, "location": location, "company": company,
             "min_match": min_match, "sponsorship": sponsorship, "min_salary": min_salary,
             "automotive_only": automotive_only,
+            "hide_work_permit_required": hide_work_permit_required,
         },
     )
 

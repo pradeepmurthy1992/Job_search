@@ -123,7 +123,7 @@
 
   <nav class="tabs">
     {% for code in country_choices %}
-      <a href="{{ url_for('jobs_view', country=code) }}" class="{{ 'active' if code == country else '' }}">
+      <a href="{{ url_for('jobs_view', country=code, **tab_query) }}" class="{{ 'active' if code == country else '' }}">
         {{ code if code == 'ALL' else jurisdictions[code].name }} ({{ counts.get(code, 0) }})
       </a>
     {% endfor %}
@@ -178,6 +178,12 @@
       <label class="checkbox-label">
         <input type="checkbox" name="automotive_only" value="1" {{ 'checked' if filters.automotive_only else '' }}>
         Automotive companies only
+      </label>
+    </div>
+    <div class="filter-field checkbox-field">
+      <label class="checkbox-label" title="Hides postings whose JD explicitly restricts eligibility to citizens/PR holders or existing local work-permit holders — the exact per-country phrases this platform checks for (e.g. &quot;no visa sponsorship&quot;, &quot;must have valid work authorization&quot;) are documented per country in config.py.">
+        <input type="checkbox" name="hide_work_permit_required" value="1" {{ 'checked' if filters.hide_work_permit_required else '' }}>
+        Hide jobs requiring existing work permit
       </label>
     </div>
     <div class="filter-actions">
