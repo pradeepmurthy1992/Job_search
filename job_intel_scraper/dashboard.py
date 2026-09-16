@@ -19,7 +19,7 @@ import time
 
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 
-from . import db, cover_letter, resume_contract, manual_job, company_sector
+from . import db, cover_letter, resume_contract, manual_job, company_sector, job_function
 from .config import JURISDICTIONS
 
 app = Flask(__name__)
@@ -93,6 +93,7 @@ def _shape_job_row(row) -> dict:
     d["is_automotive"] = company_sector.is_automotive(
         d.get("board_or_company", ""), d.get("company_name", "") or "", d.get("title", "") or "",
     )
+    d["job_function"] = job_function.classify(d.get("title", ""))
 
     return d
 
@@ -147,6 +148,10 @@ def jobs_view():
     min_salary = request.args.get("min_salary", "").strip()
     automotive_only = request.args.get("automotive_only", "").strip() == "1"
     hide_work_permit_required = request.args.get("hide_work_permit_required", "").strip() == "1"
+    function_filter = request.args.get("function", "").strip()
+    group_by = request.args.get("group_by", "match").strip()
+    if group_by not in ("match", "company"):
+        group_by = "match"
 
     base_filter_kwargs = dict(
         posted_within_days=int(days_posted) if days_posted.isdigit() else None,
@@ -168,6 +173,8 @@ def jobs_view():
             shaped = [j for j in shaped if j["is_automotive"]]
         if hide_work_permit_required:
             shaped = [j for j in shaped if j["eligibility_verdict"] != "hard_exclude"]
+        if function_filter:
+            shaped = [j for j in shaped if j["job_function"] == function_filter]
         return shaped
 
     conn = db.get_connection()
@@ -178,6 +185,21 @@ def jobs_view():
 
     jobs = _apply_python_filters(rows)
     kpis = _compute_kpis(jobs)
+
+    job_groups = None
+    if group_by == "company":
+        # list_jobs already orders by score — group_by_company just
+        # re-clusters that same order under each company header rather
+        # than re-sorting by name, so the strongest match per company
+        # still surfaces first within its group.
+        grouped: dict[str, list[dict]] = {}
+        for j in jobs:
+            key = j.get("company_name") or j.get("board_or_company") or "Unknown"
+            grouped.setdefault(key, []).append(j)
+        job_groups = [
+            {"company": name, "jobs": rows_, "count": len(rows_)}
+            for name, rows_ in sorted(grouped.items(), key=lambda kv: kv[0].lower())
+        ]
 
     conn = db.get_connection()
     try:
@@ -204,6 +226,9 @@ def jobs_view():
     return render_template(
         "dashboard.html",
         jobs=jobs,
+        job_groups=job_groups,
+        group_by=group_by,
+        function_choices=job_function.FUNCTION_CHOICES,
         country=country,
         country_choices=COUNTRY_CHOICES,
         jurisdictions=JURISDICTIONS,
@@ -219,6 +244,7 @@ def jobs_view():
             "min_match": min_match, "sponsorship": sponsorship, "min_salary": min_salary,
             "automotive_only": automotive_only,
             "hide_work_permit_required": hide_work_permit_required,
+            "function": function_filter,
         },
     )
 

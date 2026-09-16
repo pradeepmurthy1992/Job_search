@@ -75,6 +75,9 @@
   .clamp::after { content: "more"; display: block; color: var(--accent); font-size: 10px; }
   .clamp.expanded::after { content: "less"; }
   .country-pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--panel-2); font-size: 11px; font-weight: 700; color: var(--text-dim); }
+  .function-pill { display: inline-block; margin-top: 4px; padding: 1px 7px; border-radius: 4px; background: var(--accent-2); color: var(--bg); font-size: 10px; font-weight: 700; }
+  .company-group-header td { background: var(--panel-2); font-weight: 700; padding: 8px 12px; color: var(--text); border-top: 1px solid var(--border); }
+  .group-count { color: var(--text-faint); font-weight: 400; }
   select, textarea, button { font: inherit; }
   select { padding: 4px 6px; border-radius: 5px; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); }
   textarea { width: 100%; min-height: 44px; padding: 6px; border-radius: 5px; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); resize: vertical; font-size: 12px; }
@@ -174,6 +177,22 @@
       <label>Min salary USD/mo</label>
       <input type="number" name="min_salary" placeholder="e.g. 4000" value="{{ filters.min_salary }}" min="0" step="100">
     </div>
+    <div class="filter-field">
+      <label>Function</label>
+      <select name="function">
+        <option value="" {{ 'selected' if not filters.function else '' }}>Any</option>
+        {% for f in function_choices %}
+          <option value="{{ f }}" {{ 'selected' if filters.function == f else '' }}>{{ f }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-field">
+      <label>Group by</label>
+      <select name="group_by">
+        <option value="match" {{ 'selected' if group_by == 'match' else '' }}>Best match</option>
+        <option value="company" {{ 'selected' if group_by == 'company' else '' }}>Company</option>
+      </select>
+    </div>
     <div class="filter-field checkbox-field">
       <label class="checkbox-label">
         <input type="checkbox" name="automotive_only" value="1" {{ 'checked' if filters.automotive_only else '' }}>
@@ -240,30 +259,13 @@
     </div>
   {% endif %}
 
-  {% if not jobs %}
-    <div class="empty">No jobs match this filter. Run <code>python -m job_intel_scraper.main --countries {{ country if country != 'ALL' else 'VN NL AU' }}</code>, add one manually above, or widen the filters.</div>
-  {% else %}
-  <div style="overflow-x:auto;">
-  <table>
-    <thead>
-      <tr>
-        <th>Job</th>
-        <th>Country</th>
-        <th>Posted</th>
-        <th>Match</th>
-        <th>Salary (USD/mo)</th>
-        <th>Eligibility</th>
-        <th>Application status</th>
-        <th>Cover letter</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for job in jobs %}
+  {% macro job_row(job) %}
       <tr>
         <td>
           <a class="job-title" href="{{ job.url }}" target="_blank" rel="noopener">{{ job.title }}</a>
           {% if job.origin == 'manual' %}<span class="origin-tag">manual</span>{% endif %}
           <div class="meta">{{ job.company_name or job.board_or_company }} &middot; {{ job.location_raw or 'location n/a' }}</div>
+          <span class="function-pill">{{ job.job_function }}</span>
         </td>
         <td><span class="country-pill">{{ job.country_hint }}</span><div class="meta">{{ job.currency }}</div></td>
         <td class="meta">
@@ -317,7 +319,36 @@
           <div class="letter-status meta" data-job-id="{{ job.id }}"></div>
         </td>
       </tr>
-      {% endfor %}
+  {% endmacro %}
+
+  {% if not jobs %}
+    <div class="empty">No jobs match this filter. Run <code>python -m job_intel_scraper.main --countries {{ country if country != 'ALL' else 'VN NL AU' }}</code>, add one manually above, or widen the filters.</div>
+  {% else %}
+  <div style="overflow-x:auto;">
+  <table>
+    <thead>
+      <tr>
+        <th>Job</th>
+        <th>Country</th>
+        <th>Posted</th>
+        <th>Match</th>
+        <th>Salary (USD/mo)</th>
+        <th>Eligibility</th>
+        <th>Application status</th>
+        <th>Cover letter</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if group_by == 'company' %}
+        {% for group in job_groups %}
+          <tr class="company-group-header">
+            <td colspan="8">{{ group.company }} <span class="group-count">({{ group.count }})</span></td>
+          </tr>
+          {% for job in group.jobs %}{{ job_row(job) }}{% endfor %}
+        {% endfor %}
+      {% else %}
+        {% for job in jobs %}{{ job_row(job) }}{% endfor %}
+      {% endif %}
     </tbody>
   </table>
   </div>
