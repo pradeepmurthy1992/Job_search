@@ -77,6 +77,8 @@
   .country-pill { display: inline-block; padding: 1px 7px; border-radius: 4px; background: var(--panel-2); font-size: 11px; font-weight: 700; color: var(--text-dim); }
   .function-pill { display: inline-block; margin-top: 4px; padding: 1px 7px; border-radius: 4px; background: var(--accent-2); color: var(--bg); font-size: 10px; font-weight: 700; }
   .company-group-header td { background: var(--panel-2); font-weight: 700; padding: 8px 12px; color: var(--text); border-top: 1px solid var(--border); }
+  .reloc-pill { display: inline-block; margin: 4px 0 0 4px; padding: 1px 7px; border-radius: 4px; background: var(--green-bg); color: var(--green); font-size: 10px; font-weight: 700; }
+  .reloc-pill.maybe { background: var(--amber-bg); color: var(--amber); }
   .group-count { color: var(--text-faint); font-weight: 400; }
   select, textarea, button { font: inherit; }
   select { padding: 4px 6px; border-radius: 5px; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); }
@@ -205,6 +207,12 @@
         Hide jobs requiring existing work permit
       </label>
     </div>
+    <div class="filter-field checkbox-field">
+      <label class="checkbox-label" title="Shows only postings whose JD affirmatively offers visa sponsorship or relocation help (negated phrases like &quot;relocation assistance will not be provided&quot; are ignored). No JD says &quot;Indians welcome&quot; outright, so this is the closest honest signal. Silence is not a rejection.">
+        <input type="checkbox" name="relocation_only" value="1" {{ 'checked' if filters.relocation_only else '' }}>
+        Sponsorship / relocation offered
+      </label>
+    </div>
     <div class="filter-actions">
       <button class="btn" type="submit">Apply filters</button>
       <a class="btn secondary" href="{{ url_for('jobs_view', country=country) }}">Clear</a>
@@ -266,6 +274,7 @@
           {% if job.origin == 'manual' %}<span class="origin-tag">manual</span>{% endif %}
           <div class="meta">{{ job.company_name or job.board_or_company }} &middot; {{ job.location_raw or 'location n/a' }}</div>
           <span class="function-pill">{{ job.job_function }}</span>
+          {% if job.eligibility_verdict != 'hard_exclude' and job.relocation_signal == 'offered' %}<span class="reloc-pill">sponsors / relocates</span>{% elif job.eligibility_verdict != 'hard_exclude' and job.relocation_signal == 'conditional' %}<span class="reloc-pill maybe">may sponsor</span>{% endif %}
         </td>
         <td><span class="country-pill">{{ job.country_hint }}</span><div class="meta">{{ job.currency }}</div></td>
         <td class="meta">

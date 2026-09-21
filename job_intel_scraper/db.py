@@ -86,6 +86,7 @@ _COLUMNS_ADDED_AFTER_INITIAL_SCHEMA: list[tuple[str, str]] = [
     ("salary_note", "TEXT"),
     ("origin", "TEXT DEFAULT 'scraped'"),
     ("matched_countries", "TEXT"),
+    ("relocation_signal", "TEXT"),   # welcome_signal.assess(): offered/conditional/none
 ]
 
 
@@ -104,6 +105,17 @@ def _migrate(conn: sqlite3.Connection) -> None:
         "UPDATE jobs SET matched_countries = ',' || country_hint || ',' "
         "WHERE matched_countries IS NULL"
     )
+    # Backfill the relocation signal for rows that predate the column (NULL),
+    # so the dashboard filter works on existing data without a re-scrape.
+    pending = conn.execute(
+        "SELECT id, description_raw FROM jobs WHERE relocation_signal IS NULL"
+    ).fetchall()
+    if pending:
+        from . import welcome_signal
+        conn.executemany(
+            "UPDATE jobs SET relocation_signal = ? WHERE id = ?",
+            [(welcome_signal.assess(d), i) for i, d in pending],
+        )
     conn.commit()
 
 
@@ -114,6 +126,9 @@ def get_connection() -> sqlite3.Connection:
     conn.executescript(SCHEMA)
     _migrate(conn)
     return conn
+
+
+from . import welcome_signal  # noqa: E402
 
 
 def upsert_job(conn: sqlite3.Connection, job, breakdown, eligibility, salary_estimate=None, origin: str = "scraped") -> str:
@@ -135,8 +150,8 @@ def upsert_job(conn: sqlite3.Connection, job, breakdown, eligibility, salary_est
             url, description_raw, stage1_score, stage1_breakdown,
             eligibility_verdict, eligibility_note, posted_at, company_name,
             salary_usd_month_min, salary_usd_month_max, salary_note, origin,
-            first_seen_at, last_seen_at
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            first_seen_at, last_seen_at, relocation_signal
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(id) DO UPDATE SET
             title=excluded.title,
             location_raw=excluded.location_raw,
@@ -150,6 +165,7 @@ def upsert_job(conn: sqlite3.Connection, job, breakdown, eligibility, salary_est
             salary_usd_month_min=excluded.salary_usd_month_min,
             salary_usd_month_max=excluded.salary_usd_month_max,
             salary_note=excluded.salary_note,
+            relocation_signal=excluded.relocation_signal,
             matched_countries = CASE
                 WHEN instr(jobs.matched_countries, excluded.matched_countries) > 0
                 THEN jobs.matched_countries
@@ -164,7 +180,7 @@ def upsert_job(conn: sqlite3.Connection, job, breakdown, eligibility, salary_est
             eligibility.verdict, eligibility.note,
             getattr(job, "posted_at", None), getattr(job, "company_name", "") or job.board_or_company,
             salary_min, salary_max, salary_note, origin,
-            now, now,
+            now, now, welcome_signal.assess(job.description_raw),
         ),
     )
     conn.commit()

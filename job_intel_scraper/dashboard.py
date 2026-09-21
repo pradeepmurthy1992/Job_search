@@ -149,6 +149,7 @@ def jobs_view():
     automotive_only = request.args.get("automotive_only", "").strip() == "1"
     hide_work_permit_required = request.args.get("hide_work_permit_required", "").strip() == "1"
     function_filter = request.args.get("function", "").strip()
+    relocation_only = request.args.get("relocation_only", "").strip() == "1"
     group_by = request.args.get("group_by", "match").strip()
     if group_by not in ("match", "company"):
         group_by = "match"
@@ -175,6 +176,12 @@ def jobs_view():
             shaped = [j for j in shaped if j["eligibility_verdict"] != "hard_exclude"]
         if function_filter:
             shaped = [j for j in shaped if j["job_function"] == function_filter]
+        if relocation_only:
+            shaped = [
+                j for j in shaped
+                if j.get("relocation_signal") in ("offered", "conditional")
+                and j["eligibility_verdict"] != "hard_exclude"
+            ]
         return shaped
 
     conn = db.get_connection()
@@ -245,6 +252,7 @@ def jobs_view():
             "automotive_only": automotive_only,
             "hide_work_permit_required": hide_work_permit_required,
             "function": function_filter,
+            "relocation_only": relocation_only,
         },
     )
 
