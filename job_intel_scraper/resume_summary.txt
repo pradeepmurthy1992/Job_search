@@ -1,19 +1,25 @@
-Pradeep Moorthy — 11+ years automotive Program & Project Management, VAVE and
-Cost Engineering across OEM, Tier-1, and EV environments (Tata Motors,
-Mahindra & Mahindra, TVS Motor, Nissan Ashok Leyland Technologies, Ather
-Energy Ltd). Led cross-functional programs (Design, Supply Chain,
-Manufacturing, Quality, Commercial) from concept through launch across
-Waterfall, Hybrid, and Agile delivery models. Granted patent holder (vehicle
-door-slam testing methodology). Documented track record of ₹10M+ annual cost
-savings via VAVE initiatives, 15% project-delay reduction, 50-60% projected
-meshing-time cut via Altair HyperMesh/TCL automation, 12% fuel-efficiency
-improvement, and 8-10% component/resource cost cuts. Builds Python, VBA, and
-TCL automation for program reporting; Power BI dashboarding; PLM architecture
-in Enovia and CATIA V5/V6. Tools: MS Project, JIRA, AutoCAD, Google
-Workspace, Microsoft 365. PMP (PMI) in progress, expected Oct 2026. Pursuing
-an MBA in Business Analytics (SRM University, 2025-2026, 9.35 CGPA). B.E.
-Mechanical Engineering. Languages: Tamil and English (proficient), Hindi
-(conversant). Currently based in Pune, India; pursuing employer-sponsored
-relocation only, to Vietnam, the Netherlands, Australia, the United States,
-the United Kingdom, Germany, or the United Arab Emirates — no self-funded
-or independent visa pathway in any of these, employer sponsorship only.
+Pradeep Moorthy — Program & Project Manager, 11+ years across automotive OEM,
+Tier-1, and EV environments. CURRENTLY: Manager – Program Management at Ather
+Energy Limited (EV two-wheeler OEM, Bangalore, India), since Jan 2026 —
+established the Accessories & Merchandise NPD function from scratch, owns
+these programs end-to-end (concept through cost-optimized launch), runs
+Agile execution (sprint planning, JIRA-based tracking) as the team's delivery
+model, and serves as the org's AI Champion evaluating and deploying new AI
+tools cross-functionally. PREVIOUSLY: Senior Manager (VATS Operations,
+Commercial Vehicles) at Tata Motors (Jun 2023–Jan 2026, 100% on-time VATS
+delivery, cut project delays 15%); Assistant Manager (New Platform
+Development) at TVS Motor; Engineer/Assistant Manager (Project & VAVE
+Engineer) at Mahindra Research Valley — patent-granted vehicle door-slam
+testing methodology, ₹10M+ annual VAVE savings, 3 consecutive years hitting
+VAVE targets; Engineer (Vehicle Integration & VAVE) at Nissan Ashok Leyland
+Technologies — PLM architecture in Enovia/CATIA V6, 8% component-cost cuts.
+Builds Python/VBA/TCL automation for program reporting (incl. Altair
+HyperMesh TCL scripting, ~50-60% meshing-time cut) and Power BI dashboarding.
+Tools: MS Project, JIRA, CATIA V5/V6, Enovia PLM, AutoCAD. PMP (PMI) in
+progress, expected Oct 2026. MBA in Business Analytics in progress (SRM
+University, 2025-2026, 9.35 CGPA). B.E. Mechanical Engineering. Languages:
+Tamil and English (proficient), Hindi (conversant). Currently based in Pune,
+India; pursuing employer-sponsored relocation only, to Vietnam, the
+Netherlands, Australia, the United States, the United Kingdom, Germany, the
+United Arab Emirates, or Singapore — no self-funded or independent visa
+pathway in any of these, employer sponsorship only.

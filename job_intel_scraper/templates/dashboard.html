@@ -159,11 +159,13 @@
     </div>
     <div class="filter-field">
       <label>Min match %</label>
-      <select name="min_match">
+      <select name="min_match" title="Match % is the blended fit score (LLM semantic score where scored, keyword score otherwise) normalized to 0-100 — 70%+ is a strong, almost-direct fit against the resume.">
         <option value="" {{ 'selected' if not filters.min_match else '' }}>Any</option>
         <option value="25" {{ 'selected' if filters.min_match == '25' else '' }}>25%+</option>
         <option value="50" {{ 'selected' if filters.min_match == '50' else '' }}>50%+</option>
+        <option value="70" {{ 'selected' if filters.min_match == '70' else '' }}>70%+ (strong fit)</option>
         <option value="75" {{ 'selected' if filters.min_match == '75' else '' }}>75%+</option>
+        <option value="80" {{ 'selected' if filters.min_match == '80' else '' }}>80%+</option>
       </select>
     </div>
     <div class="filter-field">
