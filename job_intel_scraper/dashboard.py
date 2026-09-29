@@ -24,7 +24,12 @@ from .config import JURISDICTIONS
 
 app = Flask(__name__)
 
-COUNTRY_CHOICES = ["ALL"] + list(JURISDICTIONS.keys())
+GLOBAL_CODE = "GLOBAL"
+# ALL's total/list intentionally excludes GLOBAL — GLOBAL postings are a
+# different eligibility basis (a coarse sponsorship-phrase heuristic, not
+# a real per-country check) and are opt-in via their own tab, not blended
+# into the curated 8-country view by default.
+COUNTRY_CHOICES = ["ALL"] + list(JURISDICTIONS.keys()) + [GLOBAL_CODE]
 
 # Stalled-application follow-up threshold. A job still sitting at
 # 'applied' with no status change after this many days gets flagged in the
@@ -191,6 +196,15 @@ def jobs_view():
         conn.close()
 
     jobs = _apply_python_filters(rows)
+    if country == "ALL":
+        # GLOBAL-only postings (no real country match, just the coarse
+        # worldwide sponsorship-phrase heuristic) are opt-in via their own
+        # tab, not silently blended into the curated 8-country ALL view —
+        # a job that ALSO matches a real country stays visible here.
+        jobs = [
+            j for j in jobs
+            if any(f",{c}," in (j.get("matched_countries") or "") for c in JURISDICTIONS)
+        ]
     kpis = _compute_kpis(jobs)
 
     job_groups = None
@@ -215,6 +229,7 @@ def jobs_view():
             country_rows = _apply_python_filters(db.list_jobs(conn, country=code, **base_filter_kwargs))
             counts[code] = len(country_rows)
         counts["ALL"] = sum(counts.values())
+        counts[GLOBAL_CODE] = len(_apply_python_filters(db.list_jobs(conn, country=GLOBAL_CODE, **base_filter_kwargs)))
     finally:
         conn.close()
 

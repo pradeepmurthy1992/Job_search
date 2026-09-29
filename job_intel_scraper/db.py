@@ -131,7 +131,18 @@ def get_connection() -> sqlite3.Connection:
 from . import welcome_signal  # noqa: E402
 
 
-def upsert_job(conn: sqlite3.Connection, job, breakdown, eligibility, salary_estimate=None, origin: str = "scraped") -> str:
+def upsert_job(
+    conn: sqlite3.Connection, job, breakdown, eligibility, salary_estimate=None,
+    origin: str = "scraped", preserve_existing_eligibility: bool = False,
+) -> str:
+    """`preserve_existing_eligibility=True` is for the GLOBAL (no country
+    allowlist) pass: its eligibility verdict comes from welcome_signal.py's
+    coarse, country-agnostic sponsorship-phrase heuristic, not a real
+    per-country citizenship/sponsorship keyword check — so if this exact
+    posting already has a verdict from a real country-specific pass (e.g.
+    a genuine "US citizens only" hard_exclude), the global pass must not
+    silently downgrade it to something looser. COALESCE keeps whatever's
+    already stored and only fills in the global verdict on first insert."""
     job_id = f"{job.source}:{job.board_or_company}:{job.external_id}"
     now = time.time()
     salary_min = salary_estimate.usd_per_month_min if salary_estimate else None
@@ -143,6 +154,7 @@ def upsert_job(conn: sqlite3.Connection, job, breakdown, eligibility, salary_est
     # physical posting, visible on every country tab it legitimately
     # matches, rather than only the first one it was scraped under).
     new_country_wrapped = f",{job.country_hint},"
+    preserve = 1 if preserve_existing_eligibility else 0
     conn.execute(
         """
         INSERT INTO jobs (
@@ -158,8 +170,12 @@ def upsert_job(conn: sqlite3.Connection, job, breakdown, eligibility, salary_est
             description_raw=excluded.description_raw,
             stage1_score=excluded.stage1_score,
             stage1_breakdown=excluded.stage1_breakdown,
-            eligibility_verdict=excluded.eligibility_verdict,
-            eligibility_note=excluded.eligibility_note,
+            eligibility_verdict = CASE WHEN ? = 1
+                THEN COALESCE(jobs.eligibility_verdict, excluded.eligibility_verdict)
+                ELSE excluded.eligibility_verdict END,
+            eligibility_note = CASE WHEN ? = 1
+                THEN COALESCE(jobs.eligibility_note, excluded.eligibility_note)
+                ELSE excluded.eligibility_note END,
             posted_at=excluded.posted_at,
             company_name=excluded.company_name,
             salary_usd_month_min=excluded.salary_usd_month_min,
@@ -181,6 +197,7 @@ def upsert_job(conn: sqlite3.Connection, job, breakdown, eligibility, salary_est
             getattr(job, "posted_at", None), getattr(job, "company_name", "") or job.board_or_company,
             salary_min, salary_max, salary_note, origin,
             now, now, welcome_signal.assess(job.description_raw),
+            preserve, preserve,
         ),
     )
     conn.commit()

@@ -455,6 +455,72 @@ def fetch_all(jurisdiction) -> list[Job]:
     return matched
 
 
+GLOBAL_COUNTRY_CODE = "GLOBAL"
+
+
+def fetch_all_global(jurisdictions: dict) -> list[Job]:
+    """Fetch every board configured across EVERY jurisdiction, with NO
+    location filtering at all — the deliberate opposite of fetch_all(),
+    for the "worldwide, no country allowlist" search mode. A board tied to
+    one country's config (e.g. Zoox under US) commonly has real postings
+    in other countries too that fetch_all()'s per-country _location_matches
+    call silently drops; this surfaces every one of them regardless of
+    where it is, tagged with GLOBAL_COUNTRY_CODE rather than a specific
+    country — eligibility for these is judged by welcome_signal.py's
+    country-agnostic sponsorship/relocation phrase detection in main.py,
+    not eligibility.py's per-country keyword lists (which don't exist for
+    a country outside the 8 configured ones).
+
+    Boards are deduplicated across jurisdictions first (the same token
+    e.g. "chargepoint" is configured under NL/US/GB/DE) so a shared board
+    is only fetched once, not once per country that happens to list it."""
+    greenhouse_tokens: set[str] = set()
+    lever_tokens: set[str] = set()
+    workable_tokens: set[str] = set()
+    recruitee_tokens: set[str] = set()
+    recruitee_custom: dict[str, str] = {}
+
+    for jurisdiction in jurisdictions.values():
+        greenhouse_tokens.update(jurisdiction.greenhouse_boards)
+        lever_tokens.update(jurisdiction.lever_boards)
+        workable_tokens.update(jurisdiction.workable_boards)
+        recruitee_tokens.update(jurisdiction.recruitee_boards)
+        recruitee_custom.update(getattr(jurisdiction, "recruitee_custom_domains", {}) or {})
+
+    results: list[Job] = []
+    for board in sorted(greenhouse_tokens):
+        try:
+            results.extend(fetch_greenhouse_board(board, GLOBAL_COUNTRY_CODE))
+        except Exception as exc:  # noqa: BLE001 - one dead board shouldn't kill the run
+            print(f"[connectors] global greenhouse:{board} failed: {exc}")
+
+    for company in sorted(lever_tokens):
+        try:
+            results.extend(fetch_lever_board(company, GLOBAL_COUNTRY_CODE))
+        except Exception as exc:  # noqa: BLE001
+            print(f"[connectors] global lever:{company} failed: {exc}")
+
+    for account in sorted(workable_tokens):
+        try:
+            results.extend(fetch_workable_board(account, GLOBAL_COUNTRY_CODE))
+        except Exception as exc:  # noqa: BLE001
+            print(f"[connectors] global workable:{account} failed: {exc}")
+
+    for company in sorted(recruitee_tokens):
+        try:
+            results.extend(fetch_recruitee_board(company, GLOBAL_COUNTRY_CODE))
+        except Exception as exc:  # noqa: BLE001
+            print(f"[connectors] global recruitee:{company} failed: {exc}")
+
+    for label, host in sorted(recruitee_custom.items()):
+        try:
+            results.extend(fetch_recruitee_board(label, GLOBAL_COUNTRY_CODE, host=host))
+        except Exception as exc:  # noqa: BLE001
+            print(f"[connectors] global recruitee:{label} ({host}) failed: {exc}")
+
+    return results
+
+
 def job_to_dict(job: Job) -> dict[str, Any]:
     d = asdict(job)
     d.pop("_source_country_code", None)

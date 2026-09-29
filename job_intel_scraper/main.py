@@ -11,6 +11,7 @@ Usage:
     python -m job_intel_scraper.main --countries VN NL AU
     python -m job_intel_scraper.main --countries AU --limit 50
     python -m job_intel_scraper.main --countries NL --stage2
+    python -m job_intel_scraper.main --global
 """
 
 from __future__ import annotations
@@ -21,7 +22,7 @@ import uuid
 import time
 from pathlib import Path
 
-from . import connectors, db, scorer, eligibility, llm_client, git_guard, salary
+from . import connectors, db, scorer, eligibility, llm_client, git_guard, salary, welcome_signal
 from .config import JURISDICTIONS, GLOBAL_MAX_LLM_TOKENS_PER_RUN
 
 RESUME_TEXT_PATH = Path(__file__).parent / "resume_summary.txt"
@@ -193,6 +194,79 @@ def run(country_codes: list[str], limit_override: int | None = None, run_stage2:
     conn.close()
 
 
+def run_global(limit_override: int | None = None) -> None:
+    """The "worldwide, no country allowlist" mode: fetch every board
+    configured across every jurisdiction with NO location filtering (see
+    connectors.fetch_all_global's docstring), then keep only postings whose
+    JD shows a real, positive sponsorship/relocation signal — everything
+    else is discarded rather than stored with a weak/unknown verdict,
+    since there's no per-country citizenship-keyword list to fall back on
+    for a country outside the 8 configured ones. Stage 2 (LLM) is
+    deliberately not offered here: it's gated on a JurisdictionProfile's
+    visa_note/resume framing, neither of which exists for "the whole
+    world" as a single entity — run --stage2 per-country as normal once a
+    global find looks promising enough to also come up in `--countries`.
+    """
+    try:
+        git_guard.run_guard()
+    except git_guard.GitGuardError as exc:
+        print(f"[main] {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    conn = db.get_connection()
+    run_id = str(uuid.uuid4())
+    started_at = time.time()
+    limit = limit_override or 5000
+
+    print(f"\n=== GLOBAL (worldwide, no country allowlist) — run {run_id[:8]} ===")
+
+    jobs = connectors.fetch_all_global(JURISDICTIONS)[:limit]
+    print(f"  Fetched {len(jobs)} postings total, before the sponsorship-signal filter (capped at {limit}).")
+
+    kept = 0
+    discarded_no_signal = 0
+    for job in jobs:
+        signal_label = welcome_signal.assess(job.description_raw)
+        if signal_label == "none":
+            discarded_no_signal += 1
+            continue
+
+        breakdown = scorer.score_job(job.title, job.description_raw)
+        salary_estimate = salary.estimate_salary(job)
+        verdict = "likely_eligible" if signal_label == "offered" else "flag_for_review"
+        signal = eligibility.EligibilitySignal(
+            sponsorship_mentioned=(signal_label == "offered"),
+            citizenship_restricted=False,
+            language_requirement_flagged=False,
+            matched_keywords=[],
+            verdict=verdict,
+            note=(
+                "Global-mode heuristic (welcome_signal.py): JD affirmatively "
+                f"{'offers' if signal_label == 'offered' else 'may offer (hedged wording)'} "
+                "visa sponsorship or relocation help — not a per-country "
+                "citizenship/sponsorship check, since this posting is outside "
+                "the 8 jurisdictions with real visa research. Verify directly."
+            ),
+        )
+        db.upsert_job(
+            conn, job, breakdown, signal, salary_estimate=salary_estimate,
+            preserve_existing_eligibility=True,
+        )
+        kept += 1
+
+    print(
+        f"  Kept {kept} job(s) with a real sponsorship/relocation signal; "
+        f"discarded {discarded_no_signal} with no such signal in the JD."
+    )
+
+    conn.execute(
+        "INSERT INTO run_ledger (run_id, started_at, finished_at, country_hint, jobs_fetched, jobs_llm_scored, llm_tokens_used) VALUES (?,?,?,?,?,?,?)",
+        (run_id, started_at, time.time(), connectors.GLOBAL_COUNTRY_CODE, kept, 0, 0),
+    )
+    conn.commit()
+    conn.close()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Job Intelligence Platform — discovery + two-stage scoring")
     parser.add_argument(
@@ -205,8 +279,17 @@ def main() -> None:
         help="Also run LLM semantic scoring (needs JOB_INTEL_LLM_BACKEND env "
              "var set to 'gemini' or 'ollama' — see llm_client.py).",
     )
+    parser.add_argument(
+        "--global", action="store_true", dest="run_global",
+        help="Worldwide mode: fetch every configured board with NO country "
+             "filtering, keep only postings whose JD shows a real sponsorship/ "
+             "relocation signal. Ignores --countries/--stage2 when set.",
+    )
     args = parser.parse_args()
-    run(args.countries, args.limit, run_stage2=args.stage2)
+    if args.run_global:
+        run_global(args.limit)
+    else:
+        run(args.countries, args.limit, run_stage2=args.stage2)
 
 
 if __name__ == "__main__":

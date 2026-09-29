@@ -129,7 +129,7 @@
   <nav class="tabs">
     {% for code in country_choices %}
       <a href="{{ url_for('jobs_view', country=code, **tab_query) }}" class="{{ 'active' if code == country else '' }}">
-        {{ code if code == 'ALL' else jurisdictions[code].name }} ({{ counts.get(code, 0) }})
+        {% if code == 'ALL' %}ALL{% elif code == 'GLOBAL' %}Worldwide{% else %}{{ jurisdictions[code].name }}{% endif %} ({{ counts.get(code, 0) }})
       </a>
     {% endfor %}
   </nav>
@@ -266,6 +266,12 @@
   {% if followups %}
     <div class="followup-banner">
       {{ followups|length }} application(s) still "applied" with no status update after {{ FOLLOW_UP_THRESHOLD_DAYS }}+ days &mdash; worth a follow-up.
+    </div>
+  {% endif %}
+
+  {% if country == 'GLOBAL' %}
+    <div class="followup-banner">
+      Worldwide mode: every configured company board, any country, filtered only by a JD phrase-match for sponsorship/relocation language &mdash; not the researched per-country visa/citizenship rules the other 8 tabs use. Verify eligibility directly before relying on this.
     </div>
   {% endif %}
 
