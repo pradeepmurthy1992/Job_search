@@ -529,6 +529,49 @@ above.
   Workable customers are structurally harder to find via search-engine
   discovery than Greenhouse/Lever ones (weaker indexing).
 
+### Germany / UK deep-search follow-up (Sep 2026)
+
+Direct board-token verification (not search-engine discovery) against ~20
+DE/GB candidate names, per-platform, with a control slug confirming 404
+really means 404 (not a soft-fail):
+
+- **Isar Aerospace (Germany)** — orbital rocket manufacturer, Parsdorf/
+  Ottobrunn (Bavaria). Confirmed on **Greenhouse** at
+  `boards.greenhouse.io/isaraerospace`. 97 total postings, 79 Germany-
+  tagged, including 4 live PM titles: "Program Director," "Senior Program
+  Manager Launch Services," "Project Manager Commercial," "Senior Project
+  Manager - Ground Systems Infrastructure." Not automotive, but the same
+  hardware-NPI/manufacturing-PM discipline match as Zipline/Axon (US/VN)
+  — added to `config.py`'s DE `greenhouse_boards`, and `max_jobs_per_run`
+  bumped 200→280 so the extra volume isn't silently truncated.
+- **Vay (Germany-founded, Berlin + Las Vegas)** — real, automotive-adjacent
+  (remote-driving/teleoperation for cars), confirmed on **Greenhouse** at
+  `boards.greenhouse.io/vay`, 17 total postings — but only 3 are
+  Germany-tagged (Berlin) and none are PM-titled (mostly US ops/support
+  roles). Not added: thin DE yield, zero PM-title match, not worth the
+  board-list clutter yet. Re-check if its Berlin postings grow.
+- **Confirmed real company accounts on Workable, currently zero open
+  postings on that feed** (same "verified real, re-check periodically"
+  treatment as Applied EV/Relectrify elsewhere in this file) — **JLR**,
+  **Continental**, **MAHLE**, **HELLA**, **AESC**, **Zenobe** (GB),
+  **Oxa** (GB, formerly Oxbotica), **Vertical Aerospace** (GB),
+  **Volocopter** (DE) all resolved a named account (`{"name": "...", ...,
+  "jobs": []}`) — real accounts, not false positives (verified against a
+  deliberately-bogus control slug, which 404s as expected) — but nothing
+  live to ingest today. Worth a periodic re-check, not added to
+  `config.py` while empty.
+- No hit at all (404 across Greenhouse/Lever/Workable/Recruitee):
+  Sono Motors, Next.e.GO Mobile, sennder, FlixBus/FlixMobility, Forto,
+  Wingcopter, Quantron, Tier Mobility, Brose, Tevva, Wrightbus, GRIDSERVE,
+  InstaVolt, Octopus Energy/Octopus EV, Nissan UK, StreetDrone. Most of
+  these are either too small to run a connected ATS, or (like Nissan UK)
+  fall under a parent company's proprietary/SuccessFactors system per the
+  existing GM/Stellantis/JLR-class pattern already documented above.
+- Net effect: Germany's Program/Project-Management-titled job count went
+  5 → 8 from this one addition; UK's stayed at 10 — a real, if modest,
+  Germany gain and a confirmed-empty-handed but genuinely-tried UK pass,
+  not a skipped one.
+
 ## Setup
 
 ```bash

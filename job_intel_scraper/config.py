@@ -406,12 +406,19 @@ JURISDICTIONS: dict[str, JurisdictionProfile] = {
         # PM discipline as Zipline/Axon. 8 PM-titled US roles confirmed
         # live (Somerville, MA), incl. "Technical Program Manager" and
         # "Senior Technical Program Manager".
+        # Harbinger Motors (medium-duty electric truck/chassis OEM, Garden
+        # Grove, CA) — found by direct board-token guess (slug is
+        # "harbingermotors", not "harbinger", which 404s) during a Sep 2026
+        # deep-search pass. Confirmed on Greenhouse: 97 total postings, 3
+        # PM-titled live (Garden Grove, CA) incl. "Technical Program
+        # Manager", "NPI Project Manager, Supply Chain", "IT &
+        # CyberSecurity Program Manager". Direct automotive-OEM domain fit.
         greenhouse_boards=[
             "waymo", "lucidmotors", "flyzipline", "kodiak", "samsara",
             "archer56", "redwoodmaterials", "group14", "chargepoint",
             "nuro", "motional", "solidpower", "silananotechnologies",
             "faradayfuture", "maymobility", "scoutmotors", "gotion",
-            "formlabs",
+            "formlabs", "harbingermotors",
         ],
         # Zoox (Amazon robotaxi/AV) — Lever "zoox", 32 US PM-titled roles,
         # by far the deepest single find of this round (Foster City, CA).
@@ -421,7 +428,7 @@ JURISDICTIONS: dict[str, JurisdictionProfile] = {
         workable_boards=["ineos-automotive"],
         recruitee_boards=[],
         local_job_boards=["linkedin.com", "indeed.com"],
-        max_jobs_per_run=2700,  # true uncapped US-matched total measured at 2,514 postings after the Sep 2026 expansion (9 companies + Formlabs) plus two location-matching fixes: US state names/abbreviations (see _COUNTRY_KEYWORDS/_US_STATE_ABBREVIATIONS in connectors.py) and a bare "Remote - UK" false-positive fix; set above that so nothing is silently truncated — stage-1 scoring is free, only stage-2 LLM calls are cost-gated separately via max_llm_tokens_per_run
+        max_jobs_per_run=3000,  # true uncapped US-matched total measured at 2,729 postings after adding Harbinger Motors; set above that so nothing is silently truncated — stage-1 scoring is free, only stage-2 LLM calls are cost-gated separately via max_llm_tokens_per_run
         max_llm_tokens_per_run=300_000,
         visa_note=(
             "H-1B is the only realistic route for this profile (L-1 needs "
@@ -553,12 +560,24 @@ JURISDICTIONS: dict[str, JurisdictionProfile] = {
         # instagrid (Recruitee "instagrid", Ludwigsburg portable-battery/
         # energy-storage company) — confirmed live "Technical Project
         # Manager - Product Delivery" opening in Ludwigsburg, DE.
-        greenhouse_boards=["chargepoint", "freenow"],
+        # Isar Aerospace (Greenhouse "isaraerospace", Parsdorf/Ottobrunn,
+        # Bavaria — orbital rocket manufacturer) — found via a Sep 2026
+        # deep-search pass targeting Germany specifically (the platform's
+        # own notes flagged DE as the weakest-researched country). Not
+        # automotive, but genuinely the strongest single DE find of this
+        # round: 97 total postings, 79 Germany-tagged (54 Parsdorf + 25
+        # Ottobrunn), including 4 live PM titles — "Program Director",
+        # "Senior Program Manager Launch Services", "Project Manager
+        # Commercial", "Senior Project Manager - Ground Systems
+        # Infrastructure". Same hardware-NPI/manufacturing-PM discipline
+        # match as Zipline/Axon (US/VN) and AirTrunk (AU) — the domain
+        # differs, the program-management substance doesn't.
+        greenhouse_boards=["chargepoint", "freenow", "isaraerospace"],
         lever_boards=["finn"],
         workable_boards=["ineos-automotive"],
         recruitee_boards=["instagrid"],
         local_job_boards=["linkedin.com", "stepstone.de"],
-        max_jobs_per_run=200,
+        max_jobs_per_run=280,  # bumped from 200 after adding Isar Aerospace's 79 DE-tagged postings on top of existing ~73, so nothing is silently truncated
         max_llm_tokens_per_run=200_000,
         visa_note=(
             "EU Blue Card (Blaue Karte EU, Residence Act para 18g) is the "

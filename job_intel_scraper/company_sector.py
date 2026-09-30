@@ -101,6 +101,10 @@ _KNOWN_COMPANY_SECTOR: dict[str, bool] = {
     "gotion": False,                        # EV battery gigafactory, not vehicle-specific (US)
     "zoox": True,                           # autonomous robotaxi manufacturer, Amazon-owned (US)
     "aeva": False,                          # lidar/sensing hardware supplier, not vehicle-specific (US)
+    "harbingermotors": True,                # medium-duty electric truck/chassis OEM (US)
+    "harbinger motors": True,
+    "isaraerospace": False,                 # orbital rocket manufacturer, not vehicles (DE)
+    "isar aerospace": False,
 }
 
 # Conservative fallback for anything not in the table above (manual
