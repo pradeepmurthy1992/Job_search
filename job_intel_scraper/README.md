@@ -15,6 +15,36 @@ thresholds, sponsorship mechanics, real sponsorship/restriction phrases
 found in live postings where possible) — never invented, matching the
 rigor of the original NL Highly Skilled Migrant threshold research.
 
+## Ashby connector (Oct 2026)
+
+Wayve — the strongest UK find — migrated from Greenhouse to **Ashby**
+(`wayve.ai/careers/join-us` now 307-redirects to `jobs.ashbyhq.com/wayve`),
+so its Greenhouse board started returning 404 and the whole company
+silently vanished from refreshes (UK dropped from ~106 to 27 postings in
+one run; only a `[connectors] greenhouse:wayve failed: 404` log line
+showed it). Added `connectors.fetch_ashby_board()` against Ashby's public
+posting API (`api.ashbyhq.com/posting-api/job-board/<name>`), a new
+`ashby_boards` field on `JurisdictionProfile`, and moved Wayve there for
+both GB and US (it also lists Sunnyvale, CA roles). 148 live postings,
+10 PM-titled across London / Sunnyvale / Tokyo / Yokohama. Structured
+salary is parsed from Ashby's `compensationTiers` (validated end-to-end
+against a board that publishes pay).
+
+**robots.txt — read this before extending Ashby coverage.**
+`api.ashbyhq.com` answers `/robots.txt` with 401, which `robots_check.py`
+deliberately treats as disallow-all. A narrow, documented exception
+(`_PUBLIC_API_EXCEPTIONS`) allows only that host + the
+`/posting-api/job-board/` path, only while its robots.txt stays
+auth-blocked; a real robots.txt published there later would be honored.
+This was a knowing call by the owner, not a clean pass: Ashby documents
+the endpoint for populating a company's *own* careers page and does not
+explicitly address third-party aggregation.
+
+**Lesson worth remembering:** a board token that 404s is not "no jobs" —
+the company may have changed ATS. When one of the configured boards
+starts failing, check the company's own careers page for a redirect
+before assuming it's a transient error.
+
 ## Self-audit fixes (Sep 2026)
 
 Three real gaps found by re-reading the codebase against the platform

@@ -52,6 +52,7 @@ GREENHOUSE_API = "https://boards-api.greenhouse.io/v1/boards/{board}/jobs"
 LEVER_API = "https://api.lever.co/v0/postings/{company}"
 WORKABLE_API = "https://apply.workable.com/api/v1/widget/accounts/{account}"
 RECRUITEE_API = "https://{host}/api/offers/"
+ASHBY_API = "https://api.ashbyhq.com/posting-api/job-board/{board}?includeCompensation=true"
 
 REQUEST_TIMEOUT = 20
 
@@ -190,7 +191,7 @@ _KNOWN_COUNTRY_CODES = {
 
 @dataclass
 class Job:
-    source: str            # "greenhouse" | "lever" | "workable" | "recruitee"
+    source: str            # "greenhouse" | "lever" | "workable" | "recruitee" | "ashby"
     board_or_company: str
     external_id: str
     title: str
@@ -407,6 +408,71 @@ def fetch_recruitee_board(company_slug: str, country_hint: str, host: str | None
     return jobs
 
 
+_ASHBY_PERIODS = {"1 YEAR": "year", "1 MONTH": "month", "1 HOUR": "hour"}
+
+
+def _ashby_salary(posting: dict) -> tuple[float | None, float | None, str | None, str | None]:
+    """First 'Salary' component across Ashby's compensation tiers (equity/
+    bonus components are skipped). Intervals we can't convert to the
+    year/month/hour set salary.py understands (weekly, daily, "NONE") are
+    dropped rather than guessed at."""
+    tiers = (posting.get("compensation") or {}).get("compensationTiers") or []
+    for tier in tiers:
+        for comp in tier.get("components") or []:
+            if comp.get("compensationType") != "Salary":
+                continue
+            period = _ASHBY_PERIODS.get(str(comp.get("interval") or "").upper())
+            if period and comp.get("currencyCode") and (comp.get("minValue") or comp.get("maxValue")):
+                return comp.get("minValue"), comp.get("maxValue"), comp.get("currencyCode"), period
+    return None, None, None, None
+
+
+def fetch_ashby_board(board_name: str, country_hint: str) -> list[Job]:
+    """Fetch all live postings for one Ashby job board via its public
+    posting API. Unlisted postings (isListed=false) are skipped — they're
+    not shown on the company's public board. Primary and secondary
+    locations are joined into one location string so a posting open in
+    London AND Sunnyvale matches both countries' tabs."""
+    url = ASHBY_API.format(board=board_name)
+    robots_check.assert_allowed(url, target_label=f"ashby:{board_name}")
+
+    resp = requests.get(url, timeout=REQUEST_TIMEOUT, headers={"User-Agent": robots_check.DEFAULT_USER_AGENT})
+    resp.raise_for_status()
+    data = resp.json()
+
+    jobs: list[Job] = []
+    for posting in data.get("jobs", []):
+        if posting.get("isListed") is False:
+            continue
+        locations: list[str] = []
+        for loc in [posting.get("location")] + [
+            (sec or {}).get("location") for sec in posting.get("secondaryLocations") or []
+        ]:
+            if loc and loc not in locations:
+                locations.append(loc)
+        sal_min, sal_max, sal_cur, sal_period = _ashby_salary(posting)
+        jobs.append(Job(
+            source="ashby",
+            board_or_company=board_name,
+            external_id=str(posting.get("id")),
+            title=posting.get("title", ""),
+            location_raw="; ".join(locations),
+            url=posting.get("jobUrl", ""),
+            description_raw=(posting.get("descriptionPlain")
+                             or posting.get("descriptionHtml") or ""),
+            country_hint=country_hint,
+            fetched_at=time.time(),
+            posted_at=_parse_iso_to_epoch(posting.get("publishedAt")),
+            company_name=board_name.replace("-", " ").title(),
+            salary_min=sal_min,
+            salary_max=sal_max,
+            salary_currency=sal_cur,
+            salary_period=sal_period,
+        ))
+    robots_check.polite_delay()
+    return jobs
+
+
 def fetch_all(jurisdiction) -> list[Job]:
     """Fetch every configured board for one JurisdictionProfile, then drop
     any job whose actual location doesn't match that jurisdiction's country
@@ -444,6 +510,12 @@ def fetch_all(jurisdiction) -> list[Job]:
         except Exception as exc:  # noqa: BLE001
             print(f"[connectors] recruitee:{label} ({host}) failed: {exc}")
 
+    for board in getattr(jurisdiction, "ashby_boards", []):
+        try:
+            results.extend(fetch_ashby_board(board, jurisdiction.country_code))
+        except Exception as exc:  # noqa: BLE001
+            print(f"[connectors] ashby:{board} failed: {exc}")
+
     matched = [j for j in results if _location_matches(j, jurisdiction.country_code)]
     dropped = len(results) - len(matched)
     if dropped:
@@ -479,8 +551,10 @@ def fetch_all_global(jurisdictions: dict) -> list[Job]:
     workable_tokens: set[str] = set()
     recruitee_tokens: set[str] = set()
     recruitee_custom: dict[str, str] = {}
+    ashby_tokens: set[str] = set()
 
     for jurisdiction in jurisdictions.values():
+        ashby_tokens.update(getattr(jurisdiction, "ashby_boards", []))
         greenhouse_tokens.update(jurisdiction.greenhouse_boards)
         lever_tokens.update(jurisdiction.lever_boards)
         workable_tokens.update(jurisdiction.workable_boards)
@@ -517,6 +591,12 @@ def fetch_all_global(jurisdictions: dict) -> list[Job]:
             results.extend(fetch_recruitee_board(label, GLOBAL_COUNTRY_CODE, host=host))
         except Exception as exc:  # noqa: BLE001
             print(f"[connectors] global recruitee:{label} ({host}) failed: {exc}")
+
+    for board in sorted(ashby_tokens):
+        try:
+            results.extend(fetch_ashby_board(board, GLOBAL_COUNTRY_CODE))
+        except Exception as exc:  # noqa: BLE001
+            print(f"[connectors] global ashby:{board} failed: {exc}")
 
     return results
 

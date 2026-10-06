@@ -63,6 +63,11 @@ class JurisdictionProfile:
     # structure is unchanged, just the host. Keyed by a label (for logging)
     # -> full custom hostname.
     recruitee_custom_domains: dict[str, str] = field(default_factory=dict)
+    # Ashby job-board names (from jobs.ashbyhq.com/<name>) — added Oct 2026
+    # after Wayve migrated Greenhouse -> Ashby and its Greenhouse board
+    # started 404ing. Public posting API: api.ashbyhq.com/posting-api/
+    # job-board/<name> (see robots_check._PUBLIC_API_EXCEPTIONS).
+    ashby_boards: list[str] = field(default_factory=list)
     # Non-ATS job boards to eventually add bespoke connectors for.
     # Kept here as a checklist, not implemented in this skeleton.
     local_job_boards: list[str] = field(default_factory=list)
@@ -427,6 +432,9 @@ JURISDICTIONS: dict[str, JurisdictionProfile] = {
         lever_boards=["zoox", "aeva"],
         workable_boards=["ineos-automotive"],
         recruitee_boards=[],
+        # Wayve's Ashby board (see GB) also lists Sunnyvale, CA roles
+        # incl. "Technical Program Manager Director, Driver Out".
+        ashby_boards=["wayve"],
         local_job_boards=["linkedin.com", "indeed.com"],
         max_jobs_per_run=3000,  # true uncapped US-matched total measured at 2,729 postings after adding Harbinger Motors; set above that so nothing is silently truncated — stage-1 scoring is free, only stage-2 LLM calls are cost-gated separately via max_llm_tokens_per_run
         max_llm_tokens_per_run=300_000,
@@ -486,17 +494,21 @@ JURISDICTIONS: dict[str, JurisdictionProfile] = {
         # Autocraft Solutions Group (Workable, already in NL config) — UK
         # parent company, has UK-tagged postings (e.g. Quality Engineer,
         # Wellingborough) alongside its NL production-site roles.
-        # Wayve (autonomous driving, London) — Greenhouse "wayve",
-        # live-verified: 6 genuine Program/Technical-Program-Manager
-        # titled roles in London, strongest single find for GB.
+        # Wayve (autonomous driving, London) — originally found on Greenhouse
+        # "wayve" (6 PM-titled London roles, strongest single GB find), but
+        # Wayve MIGRATED TO ASHBY by Oct 2026 (wayve.ai/careers/join-us now
+        # 307-redirects to jobs.ashbyhq.com/wayve; the Greenhouse board
+        # 404s). Now fetched via ashby_boards below — 148 live postings,
+        # 10 PM-titled across London/Sunnyvale/Tokyo/Yokohama.
         # Fastned (EV charging, already in NL config) — same live board,
         # 3 UK-tagged postings (London) incl. "Senior Expansion Manager
         # UK" — expansion/programme-management-flavored, not literally
         # "Project Manager" but a real fit.
-        greenhouse_boards=["waymo", "chargepoint", "wayve"],
+        greenhouse_boards=["waymo", "chargepoint"],
         lever_boards=[],
         workable_boards=["ineos-automotive", "autocraft-solutions-group"],
         recruitee_boards=["fastned"],
+        ashby_boards=["wayve"],
         local_job_boards=["linkedin.com", "indeed.co.uk"],
         max_jobs_per_run=200,
         max_llm_tokens_per_run=200_000,

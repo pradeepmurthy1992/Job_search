@@ -140,6 +140,7 @@ def run(country_codes: list[str], limit_override: int | None = None, run_stage2:
         has_any_board = any([
             jurisdiction.greenhouse_boards, jurisdiction.lever_boards,
             jurisdiction.workable_boards, jurisdiction.recruitee_boards,
+            jurisdiction.ashby_boards,
         ])
         if not has_any_board:
             print(

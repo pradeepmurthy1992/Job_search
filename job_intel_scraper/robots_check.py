@@ -25,6 +25,28 @@ _DISALLOW_ALL = object()
 
 DEFAULT_USER_AGENT = "JobIntelBot/1.0 (+contact: pradeepmoorthy92@gmail.com)"
 
+# Hosts whose robots.txt answered 401/403 this process (see _get_parser) —
+# only these hosts can ever qualify for the exception below.
+_AUTH_BLOCKED_HOSTS: set[str] = set()
+
+# NARROW, DELIBERATE exception to the fail-closed rule below, approved by
+# the user (Oct 2026) after being told about the tradeoff. Ashby's public
+# job-posting API (documented at developers.ashbyhq.com: "If you host your
+# own careers page, you can use this data to populate it") lives on
+# api.ashbyhq.com, which serves no readable robots.txt — it answers 401
+# "Unauthorized", which the fail-closed rule would read as disallow-all and
+# refuse outright. The only real robots.txt Ashby publishes is on the
+# separate jobs.ashbyhq.com host (Disallow: /api/, /b/, /meeting/), a
+# different host and path structure from /posting-api/job-board/, and that
+# host is never touched here.
+# The exception is as tight as it can be: this exact host, this exact path
+# prefix, and ONLY while the host's robots.txt is auth-blocked. If Ashby
+# ever publishes a real robots.txt on api.ashbyhq.com, it takes over and a
+# disallow in it is honored exactly like any other target's.
+_PUBLIC_API_EXCEPTIONS: dict[str, tuple[str, ...]] = {
+    "https://api.ashbyhq.com": ("/posting-api/job-board/",),
+}
+
 
 def _get_parser(base_url: str):
     """Returns a Protego ruleset, or the _DISALLOW_ALL sentinel if
@@ -43,6 +65,7 @@ def _get_parser(base_url: str):
             resp = requests.get(f"{host}/robots.txt", timeout=10, headers={"User-Agent": DEFAULT_USER_AGENT})
             if resp.status_code in (401, 403):
                 _CACHE[host] = _DISALLOW_ALL
+                _AUTH_BLOCKED_HOSTS.add(host)
             elif resp.status_code >= 400:
                 # No robots.txt at all (404 etc.) conventionally means
                 # everything is allowed — an empty ruleset parses that way.
@@ -65,7 +88,14 @@ def is_allowed(url: str, user_agent: str = DEFAULT_USER_AGENT) -> bool:
     """Return True only if robots.txt explicitly permits fetching this URL."""
     parser = _get_parser(url)
     if parser is _DISALLOW_ALL:
-        return False
+        parsed = urlparse(url)
+        host = f"{parsed.scheme}://{parsed.netloc}"
+        prefixes = _PUBLIC_API_EXCEPTIONS.get(host)
+        return bool(
+            prefixes
+            and host in _AUTH_BLOCKED_HOSTS
+            and parsed.path.startswith(prefixes)
+        )
     return parser.can_fetch(url, user_agent)
 
 
