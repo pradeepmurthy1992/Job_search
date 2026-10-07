@@ -24,6 +24,7 @@ from pathlib import Path
 
 from . import connectors, db, scorer, eligibility, llm_client, git_guard, salary, welcome_signal
 from .config import JURISDICTIONS, GLOBAL_MAX_LLM_TOKENS_PER_RUN
+from .portals import PORTAL_LOADERS
 
 RESUME_TEXT_PATH = Path(__file__).parent / "resume_summary.txt"
 
@@ -141,6 +142,7 @@ def run(country_codes: list[str], limit_override: int | None = None, run_stage2:
             jurisdiction.greenhouse_boards, jurisdiction.lever_boards,
             jurisdiction.workable_boards, jurisdiction.recruitee_boards,
             jurisdiction.ashby_boards,
+            PORTAL_LOADERS.get(code),
         ])
         if not has_any_board:
             print(

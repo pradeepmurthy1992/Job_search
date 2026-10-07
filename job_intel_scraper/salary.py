@@ -25,6 +25,14 @@ FX_TO_USD: dict[str, float] = {
     "AUD": 0.66,
     "GBP": 1.27,
     "VND": 0.0000395,
+    # Added Oct 2026 with the Norway jurisdiction. NOK ~9.49/USD (Aug 2026
+    # quote; it moved 9.5-9.7 over the summer), SGD ~1.29/USD (Oct 2026).
+    # AED is hard-pegged at 3.6725/USD, so that one doesn't drift. SGD and
+    # AED were MISSING until now, so structured SG/AE salaries were being
+    # reported as "unrecognized currency" instead of converted.
+    "NOK": 0.105,
+    "SGD": 0.775,
+    "AED": 0.2723,
 }
 
 _CURRENCY_SYMBOLS = {
@@ -33,6 +41,7 @@ _CURRENCY_SYMBOLS = {
     "£": "GBP", "GBP": "GBP",
     "A$": "AUD", "AU$": "AUD", "AUD": "AUD",
     "VND": "VND", "VNĐ": "VND", "₫": "VND",
+    "NOK": "NOK", "SGD": "SGD", "AED": "AED",
 }
 
 _PERIOD_TO_MONTHLY_FACTOR = {
@@ -65,9 +74,9 @@ _NUMBER = r"[\d,.]+(?:\s*[kK])?"
 # false negatives (missing a statable salary) are far less harmful here than
 # false positives (inventing one), matching the "never guess" design choice.
 _SALARY_PATTERN = re.compile(
-    r"(?P<currency>US\$|AU\$|A\$|VN[DĐ]|₫|[$€£]|USD|EUR|GBP|AUD|VND)\s*"
+    r"(?P<currency>US\$|AU\$|A\$|VN[DĐ]|₫|[$€£]|USD|EUR|GBP|AUD|VND|NOK)\s*"
     r"(?P<low>" + _NUMBER + r")"
-    r"(?:\s*[-–to]+\s*(?P<currency2>US\$|AU\$|A\$|VN[DĐ]|₫|[$€£]|USD|EUR|GBP|AUD|VND)?\s*(?P<high>" + _NUMBER + r"))?"
+    r"(?:\s*[-–to]+\s*(?P<currency2>US\$|AU\$|A\$|VN[DĐ]|₫|[$€£]|USD|EUR|GBP|AUD|VND|NOK)?\s*(?P<high>" + _NUMBER + r"))?"
     r"\s*(?:" + _PERIOD_PATTERN + r")?",
     re.IGNORECASE,
 )

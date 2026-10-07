@@ -44,8 +44,10 @@ def assess(job_description: str, jurisdiction: JurisdictionProfile) -> Eligibili
             matched_keywords=citizenship_hits,
             verdict="hard_exclude",
             note=(
-                f"Excluded: posting restricts eligibility to citizens/PR holders "
-                f"({', '.join(citizenship_hits)})."
+                f"Excluded: posting states an eligibility requirement a new "
+                f"arrival can't meet — citizenship/PR, an existing work "
+                f"permit, no sponsorship, or security clearance "
+                f"(matched: {', '.join(citizenship_hits)})."
             ),
         )
 

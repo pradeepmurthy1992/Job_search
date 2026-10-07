@@ -101,6 +101,14 @@ _COUNTRY_KEYWORDS: dict[str, list[str]] = {
            "frankfurt", "stuttgart", "cologne", "köln", "böblingen"],
     "AE": ["united arab emirates", "uae", "dubai", "abu dhabi", "sharjah"],
     "SG": ["singapore"],
+    # Deliberately excludes "kongsberg", "moss" and "asker": they're real
+    # Norwegian towns but also ordinary words / company names that appear in
+    # non-Norway location strings ("Kongsberg Discovery, Houston, TX").
+    "NO": ["norway", "norge", "oslo", "bergen", "stavanger", "trondheim",
+           "tromsø", "tromso", "drammen", "kristiansand", "fornebu", "lysaker",
+           "sandvika", "skøyen", "skoyen", "ålesund", "alesund", "haugesund",
+           "bodø", "fredrikstad", "sandnes", "gardermoen", "lillestrøm",
+           "tønsberg", "sandefjord", "horten", "raufoss"],
 }
 # Some US boards format multi-site postings as bare "City, ST" pairs with
 # no full state name or "United States" anywhere (e.g. Sila Nanotechnologies:
@@ -515,6 +523,15 @@ def fetch_all(jurisdiction) -> list[Job]:
             results.extend(fetch_ashby_board(board, jurisdiction.country_code))
         except Exception as exc:  # noqa: BLE001
             print(f"[connectors] ashby:{board} failed: {exc}")
+
+    # Bespoke company-portal loaders (see portals.py). Imported here, not at
+    # module top: portals.py imports Job from this module.
+    from .portals import PORTAL_LOADERS
+    for loader in PORTAL_LOADERS.get(jurisdiction.country_code, []):
+        try:
+            results.extend(loader(jurisdiction.country_code))
+        except Exception as exc:  # noqa: BLE001
+            print(f"[connectors] portal:{loader.__name__} failed: {exc}")
 
     matched = [j for j in results if _location_matches(j, jurisdiction.country_code)]
     dropped = len(results) - len(matched)

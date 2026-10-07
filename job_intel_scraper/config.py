@@ -807,6 +807,113 @@ JURISDICTIONS: dict[str, JurisdictionProfile] = {
             "not relevant given this candidate's seniority."
         ),
     ),
+    # Norway — added Oct 2026 from a user-supplied "50 companies hiring
+    # internationals" list. None of its companies run their own careers
+    # page on a connector-supported ATS (most are on Teamtailor, Workday,
+    # SuccessFactors, SmartRecruiters, HR Manager, Webcruiter), so there
+    # are deliberately NO board lists here: Norway jobs enter through the
+    # manual/portal path (manual_job.ingest_manual_job), read from each
+    # company's own public vacancy page, and are a snapshot rather than
+    # something `main.py` refreshes.
+    "NO": JurisdictionProfile(
+        name="Norway",
+        country_code="NO",
+        currency="NOK",
+        sponsorship_keywords=[
+            "visa sponsorship", "work permit support", "assist with work permit",
+            "help with residence permit", "support with your work permit",
+            "residence permit", "skilled worker permit", "relocation support",
+            "relocation package", "relocation assistance",
+            "international candidates welcome", "international applicants",
+            "arbeidstillatelse", "oppholdstillatelse", "bistå med flytting",
+        ],
+        # Hard excludes. Kept to specific phrasings: bare "security
+        # clearance" would false-positive on "no security clearance
+        # needed". Defence/space employers (e.g. Kongsberg Defence &
+        # Aerospace) state outright that the role requires Norwegian
+        # security clearance (NSM personnel vetting under the Security Act).
+        # Treated as a hard exclude: vetting needs a verifiable history
+        # that a new arrival from outside Norway/NATO generally doesn't
+        # have — an inference, not a verified rule; check the specific
+        # posting. The Norwegian words below are unambiguous; the English
+        # ones are the specific "required"-style phrasings.
+        citizenship_restricted_keywords=[
+            "norwegian citizenship", "norwegian citizen", "norsk statsborger",
+            "norsk statsborgerskap", "eu/eea citizens only", "eea citizens only",
+            "eu/eea citizenship required", "eøs-borger", "eu/eøs-borger",
+            "must have the right to work in norway", "right to work in norway is required",
+            "must have a valid work permit", "valid norwegian work permit",
+            "must already hold a work permit", "må ha gyldig arbeidstillatelse",
+            "gyldig arbeidstillatelse", "no visa sponsorship", "we do not sponsor",
+            "unable to sponsor", "not able to sponsor", "without sponsorship",
+            "security clearance required", "must obtain security clearance",
+            "must be eligible for security clearance", "able to obtain a security clearance",
+            "norwegian security clearance", "nato security clearance",
+            "sikkerhetsklarering", "sikkerhetsklarert", "sikkerhetsklaring",
+        ],
+        # Flagged in the note, not an exclusion — plenty of Norwegian
+        # employers genuinely work in English, but many roles (especially
+        # titled in Norwegian: "Prosjektleder") expect fluent Norwegian.
+        language_requirement_keywords=[
+            "fluent norwegian", "fluent in norwegian", "norwegian language",
+            "must speak norwegian", "norwegian is required", "norwegian (fluent)",
+            "good norwegian", "excellent norwegian", "very good norwegian",
+            "flytende norsk", "norsk og engelsk", "norskkunnskaper",
+            "norsk språk", "skriftlig og muntlig norsk",
+            # Markers of a posting WRITTEN in Norwegian (such an ad
+            # effectively expects Norwegian, and English keyword scoring
+            # under-reads it) — same idea as the Vietnam note about
+            # Vietnamese-only JDs.
+            "arbeidsoppgaver", "kvalifikasjoner", "vi tilbyr",
+            "søknadsfrist", "stillingen krever", "personlige egenskaper",
+        ],
+        sponsorship_required=True,
+        greenhouse_boards=[],
+        lever_boards=[],
+        workable_boards=[],
+        recruitee_boards=[],
+        local_job_boards=["finn.no", "arbeidsplassen.nav.no", "englishjobs.no", "linkedin.com"],
+        max_jobs_per_run=150,
+        max_llm_tokens_per_run=150_000,
+        visa_note=(
+            "Skilled Worker residence permit (UDI) is the route: a concrete "
+            "full-time job offer from a Norwegian employer, relevant higher "
+            "education or vocational training matching the job (bachelor's "
+            "= at least 3 years of higher education, master's = at least 5), "
+            "and pay/working conditions not worse than normal in Norway. "
+            "Where a collective agreement covers the role the employee must "
+            "normally get the collectively agreed wage; where none applies, "
+            "UDI's salary floor applies — from 1 MAY 2026: NOK 545,400/year "
+            "pre-tax if the position requires a bachelor's-level education, "
+            "NOK 624,700/year if it requires a master's (raised from NOK "
+            "522,600 / 599,200 effective 1 Sep 2025; UDI may accept less "
+            "only with strong documentation that the wage is normal for "
+            "the role and place). The threshold follows what the POSITION "
+            "requires, not the applicant's own degrees — this candidate's "
+            "completed degree is a B.E. (bachelor's-level); the MBA is in "
+            "progress (due 2026), so the bachelor's-level floor is the "
+            "realistic one unless a role asks for a master's. Unlike the "
+            "UK there is no employer sponsor-licence regime: the employer "
+            "completes a job-offer form and the applicant applies to UDI, "
+            "so silence on 'sponsorship' in a JD says little — what matters "
+            "is that the employer is willing to hire a non-EEA national. "
+            "Secondary sources put processing at roughly 4-8 weeks (verify "
+            "on udi.no; its pages block automated fetching, so these rules "
+            "were taken from law-firm/relocation-firm summaries of UDI's "
+            "published figures, cross-checked across two sources). "
+            "Practical filters for this candidate: (1) defence/space "
+            "employers (Kongsberg Defence & Aerospace etc.) often state the "
+            "role requires Norwegian (sometimes NATO) security clearance — "
+            "treated as a hard exclude because NSM vetting needs a "
+            "verifiable history a new arrival from outside Norway/NATO "
+            "generally lacks (an inference — check each posting; 11 of the "
+            "15 Kongsberg project/program roles loaded in Oct 2026 said so "
+            "outright); (2) "
+            "many roles, especially ones titled in Norwegian, expect "
+            "fluent Norwegian; (3) the source list itself warns that some "
+            "labour roles require an existing Norwegian/EEA work right."
+        ),
+    ),
 }
 
 

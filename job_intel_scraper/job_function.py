@@ -27,6 +27,11 @@ _FUNCTION_KEYWORDS: list[tuple[str, list[str]]] = [
         "program manager", "programme manager", "project manager",
         "technical program manager", "tpm", "delivery manager", "pmo",
         "program management", "project management",
+        # Norwegian titles (Norway jurisdiction, Oct 2026) — "Prosjektleder"
+        # is simply "project manager".
+        "prosjektleder", "delprosjektleder", "prosjektplanlegger",
+        "jobbpakkeleder", "prosjektkoordinator", "prosjektsjef",
+        "programleder",
     ]),
     ("Operations/Manufacturing", [
         "operations", "manufacturing", "production", "supply chain",

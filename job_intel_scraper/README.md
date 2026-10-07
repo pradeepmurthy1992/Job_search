@@ -15,6 +15,50 @@ thresholds, sponsorship mechanics, real sponsorship/restriction phrases
 found in live postings where possible) — never invented, matching the
 rigor of the original NL Highly Skilled Migrant threshold research.
 
+## Norway (added Oct 2026)
+
+Ninth country, added from a user-supplied "50 companies hiring
+internationals" document (`Norway_50_Companies_International_Jobs_2026.docx`,
+a hiring snapshot dated 4 Oct 2026 — a list of employers and career-page
+links, not a list of jobs). What was found, in order:
+
+- **None of the 50 run their own careers page on a supported ATS**
+  (Greenhouse/Lever/Ashby/Workable/Recruitee). Scanned every careers page
+  for ATS signatures, then probed ~30 plausible slugs per API: zero hits.
+  Mostly Teamtailor, Workday, SuccessFactors, SmartRecruiters, HR Manager,
+  Webcruiter. Five sites were not read at all because their robots.txt
+  blocks bots or refuses to be read (DNV, Helly Hansen, Subsea7, two
+  hotels) — per the project rule, never worked around.
+- **Every relevant portal was then read directly in a browser** (as the
+  owner directed). Project/program roles in Norway found only at
+  **Kongsberg**. Checked and found none: Aker Solutions (AI/data and
+  inspection roles), Aibel, Tomra (3 roles), Höegh Autoliners (4 roles, none
+  PM), Yara (2), Statkraft (no PM in Norway in the list loaded), Equinor
+  (internships/technicians), Aker BP, Norfund (the "Project Manager –
+  Digital Transformation" role on the doc is gone), Nordic Semiconductor
+  (its one TPM role is in Boston), Six Robotics (one Product Manager).
+  englishjobs.no was not used: every job link is a `/clickout/` redirect
+  that its robots.txt disallows, and it carries no job descriptions.
+- `portals.py` is a small bespoke loader (robots-checked, honest UA) for
+  Kongsberg's server-rendered vacancy pages, registered in
+  `PORTAL_LOADERS["NO"]` so `main.py --countries NO` refreshes it. Loads
+  the project/program/planning/change/configuration roles with a Norwegian
+  location: 15 postings.
+- **11 of those 15 are hard-excluded** — the JDs say outright the role needs
+  Norwegian (sometimes NATO) security clearance, or that the candidate must
+  qualify for clearance under the Security Act. That's an inference that a
+  new arrival can't get vetted, not a verified rule (see `visa_note`).
+  4 remain: Senior Project Manager (Horten), Change Manager, and two
+  Norwegian-titled roles (flagged as written in Norwegian).
+
+Visa rules in `config.py` (`NO` profile) are from law-firm/relocation-firm
+summaries of UDI figures, cross-checked across two sources, because
+udi.no returns 403 to automated fetches: Skilled Worker permit, salary floor
+NOK 545,400 (bachelor's-level role) / NOK 624,700 (master's-level) from
+1 May 2026. `salary.py` gained NOK (≈0.105 USD), and also SGD and AED,
+which were missing — structured Singapore/UAE salaries had been showing
+"unrecognized currency". `resume_summary.txt` now lists Norway as a target.
+
 ## Ashby connector (Oct 2026)
 
 Wayve — the strongest UK find — migrated from Greenhouse to **Ashby**
